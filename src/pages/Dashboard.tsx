@@ -164,7 +164,8 @@ const Dashboard = () => {
             <TabsTrigger value="cold-storage" className="flex items-center gap-2">
               <HardDrive className="w-4 h-4" />
               Cold Storage
-            </TabsList>
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="zero-capital" className="space-y-6">
             <ZeroCapitalArbitrage />
