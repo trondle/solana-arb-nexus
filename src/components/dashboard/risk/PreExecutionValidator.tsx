@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -429,7 +428,6 @@ const PreExecutionValidator = () => {
                           c.id === check.id ? { ...c, enabled: checked } : c
                         ));
                       }}
-                      size="sm"
                     />
                   </div>
                 </div>
