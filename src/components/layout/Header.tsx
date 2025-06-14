@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { LogOut, User, Shield } from 'lucide-react';
+import { LogOut, User, Shield, Lock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Header = () => {
   const { user, userRole, signOut } = useAuth();
@@ -29,6 +30,20 @@ const Header = () => {
         <div className="flex items-center gap-4">
           <Shield className="w-6 h-6 text-primary" />
           <h1 className="text-lg font-semibold">MEV Arbitrage Nexus</h1>
+          
+          {user && (userRole === 'admin' || userRole === 'trader') && (
+            <nav className="flex items-center gap-4 ml-8">
+              <Link to="/dashboard">
+                <Button variant="ghost" size="sm">Dashboard</Button>
+              </Link>
+              <Link to="/security">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  <Lock className="w-4 h-4" />
+                  Security
+                </Button>
+              </Link>
+            </nav>
+          )}
         </div>
 
         {user && (

@@ -9,6 +9,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Security from "./pages/Security";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="viewer">
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/security" 
+              element={
+                <ProtectedRoute requiredRole="trader">
+                  <Security />
                 </ProtectedRoute>
               } 
             />
