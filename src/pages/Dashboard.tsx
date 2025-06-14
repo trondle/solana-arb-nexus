@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +9,8 @@ import OpportunityDetectionEngine from '@/components/dashboard/OpportunityDetect
 import DetectionAlgorithms from '@/components/dashboard/DetectionAlgorithms';
 import TransactionSafetyValidator from '@/components/dashboard/TransactionSafetyValidator';
 import FlashLoanProcessor from '@/components/dashboard/FlashLoanProcessor';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap } from 'lucide-react';
+import MEVTransactionBuilder from '@/components/dashboard/MEVTransactionBuilder';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -54,7 +54,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -78,6 +78,10 @@ const Dashboard = () => {
             <TabsTrigger value="flashloan" className="flex items-center gap-2">
               <Zap className="w-4 h-4" />
               Flash Loans
+            </TabsTrigger>
+            <TabsTrigger value="mev-builder" className="flex items-center gap-2">
+              <Hammer className="w-4 h-4" />
+              MEV Builder
             </TabsTrigger>
             <TabsTrigger value="calculator" className="flex items-center gap-2">
               <Calculator className="w-4 h-4" />
@@ -111,6 +115,10 @@ const Dashboard = () => {
 
           <TabsContent value="flashloan" className="space-y-6">
             <FlashLoanProcessor />
+          </TabsContent>
+
+          <TabsContent value="mev-builder" className="space-y-6">
+            <MEVTransactionBuilder />
           </TabsContent>
 
           <TabsContent value="calculator" className="space-y-6">
