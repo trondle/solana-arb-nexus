@@ -1,6 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/hooks/useAuth';
+import Header from '@/components/layout/Header';
 import PriceTracker from '@/components/dashboard/PriceTracker';
 import ArbitrageOpportunities from '@/components/dashboard/ArbitrageOpportunities';
 import ProfitCalculator from '@/components/dashboard/ProfitCalculator';
@@ -19,22 +22,27 @@ import RiskManagement from '@/components/dashboard/RiskManagement';
 import CircuitBreaker from '@/components/dashboard/CircuitBreaker';
 import AdvancedValidation from '@/components/dashboard/AdvancedValidation';
 import ThreatDetection from '@/components/dashboard/ThreatDetection';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot, FileText, TrendingDown, HardDrive } from 'lucide-react';
 import RegulatoryCompliance from '@/components/dashboard/RegulatoryCompliance';
 import EmergencyExit from '@/components/dashboard/EmergencyExit';
 import ColdStorageIntegration from '@/components/dashboard/ColdStorageIntegration';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot, FileText, TrendingDown, HardDrive } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+  const { logAction } = useAuth();
 
   useEffect(() => {
+    // Log dashboard access
+    logAction('dashboard_accessed');
+    
     // Simulate connection status
     const timer = setTimeout(() => {
       setConnectionStatus('connected');
+      logAction('dex_connection_established');
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [logAction]);
 
   const getStatusColor = () => {
     switch (connectionStatus) {
@@ -48,18 +56,20 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Connection Status */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Solana MEV Arbitrage Dashboard</h1>
-            <p className="text-muted-foreground mt-2">Real-time monitoring and execution of arbitrage opportunities</p>
+            <h2 className="text-2xl font-bold text-foreground">Trading Dashboard</h2>
+            <p className="text-muted-foreground mt-1">Real-time monitoring and execution of arbitrage opportunities</p>
           </div>
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : connectionStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'} animate-pulse`}></div>
             <span className={`text-sm font-medium ${getStatusColor()}`}>
-              {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'disconnected' ? 'Disconnected' : 'Connecting...'}
+              {connectionStatus === 'connected' ? 'Connected to DEXs' : connectionStatus === 'disconnected' ? 'Disconnected' : 'Connecting...'}
             </span>
           </div>
         </div>
