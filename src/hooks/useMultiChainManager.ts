@@ -130,6 +130,91 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
       { name: 'QuickSwap', fee: 0.30, liquidity: 80000000, slippage: 0.12 },
       { name: 'SushiSwap', fee: 0.30, liquidity: 60000000, slippage: 0.10 }
     ]
+  },
+  // NEW TIER 1 CHAINS
+  {
+    id: 'base',
+    name: 'Base',
+    symbol: 'ETH',
+    rpcUrl: 'https://mainnet.base.org',
+    explorerUrl: 'https://basescan.org',
+    gasCost: 0.0001, // Ultra-low gas fees
+    blockTime: 2000,
+    enabled: false,
+    networkFee: 0.008,
+    flashLoanProviders: [
+      { name: 'Aave V3', fee: 0.09, maxAmount: 8000000, minAmount: 500, available: true, reliability: 98 },
+      { name: 'Compound V3', fee: 0.02, maxAmount: 5000000, minAmount: 1000, available: true, reliability: 96 },
+      { name: 'Moonwell', fee: 0.05, maxAmount: 3000000, minAmount: 500, available: true, reliability: 94 }
+    ],
+    dexes: [
+      { name: 'Aerodrome', fee: 0.05, liquidity: 120000000, slippage: 0.06 }, // Ultra-low fees
+      { name: 'Uniswap V3', fee: 0.30, liquidity: 200000000, slippage: 0.05 },
+      { name: 'BaseSwap', fee: 0.25, liquidity: 80000000, slippage: 0.08 }
+    ]
+  },
+  {
+    id: 'bsc',
+    name: 'BSC',
+    symbol: 'BNB',
+    rpcUrl: 'https://bsc-dataseed.binance.org',
+    explorerUrl: 'https://bscscan.com',
+    gasCost: 0.20, // $0.20 gas
+    blockTime: 3000,
+    enabled: false,
+    networkFee: 0.01,
+    flashLoanProviders: [
+      { name: 'Venus', fee: 0.05, maxAmount: 15000000, minAmount: 100, available: true, reliability: 97 },
+      { name: 'PancakeSwap', fee: 0.08, maxAmount: 10000000, minAmount: 500, available: true, reliability: 95 },
+      { name: 'Radiant', fee: 0.07, maxAmount: 8000000, minAmount: 1000, available: true, reliability: 93 }
+    ],
+    dexes: [
+      { name: 'PancakeSwap V3', fee: 0.25, liquidity: 800000000, slippage: 0.04 }, // Massive liquidity
+      { name: 'Biswap', fee: 0.10, liquidity: 150000000, slippage: 0.06 },
+      { name: 'MDEX', fee: 0.30, liquidity: 100000000, slippage: 0.08 }
+    ]
+  },
+  {
+    id: 'avalanche',
+    name: 'Avalanche',
+    symbol: 'AVAX',
+    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+    explorerUrl: 'https://snowscan.xyz',
+    gasCost: 0.05, // $0.05 gas
+    blockTime: 1500, // 1-2s finality
+    enabled: false,
+    networkFee: 0.012,
+    flashLoanProviders: [
+      { name: 'Aave', fee: 0.09, maxAmount: 12000000, minAmount: 500, available: true, reliability: 98 },
+      { name: 'Benqi', fee: 0.03, maxAmount: 8000000, minAmount: 1000, available: true, reliability: 96 },
+      { name: 'Trader Joe', fee: 0.06, maxAmount: 6000000, minAmount: 500, available: true, reliability: 94 }
+    ],
+    dexes: [
+      { name: 'Trader Joe V2', fee: 0.20, liquidity: 300000000, slippage: 0.06 },
+      { name: 'Pangolin', fee: 0.30, liquidity: 120000000, slippage: 0.08 },
+      { name: 'SushiSwap', fee: 0.30, liquidity: 100000000, slippage: 0.09 }
+    ]
+  },
+  {
+    id: 'optimism',
+    name: 'Optimism',
+    symbol: 'ETH',
+    rpcUrl: 'https://mainnet.optimism.io',
+    explorerUrl: 'https://optimistic.etherscan.io',
+    gasCost: 0.0005, // Low gas fees
+    blockTime: 2000,
+    enabled: false,
+    networkFee: 0.01,
+    flashLoanProviders: [
+      { name: 'Aave V3', fee: 0.09, maxAmount: 7000000, minAmount: 500, available: true, reliability: 98 },
+      { name: 'Exactly', fee: 0.04, maxAmount: 4000000, minAmount: 1000, available: true, reliability: 95 },
+      { name: 'Sonne Finance', fee: 0.06, maxAmount: 3000000, minAmount: 500, available: true, reliability: 92 }
+    ],
+    dexes: [
+      { name: 'Velodrome V2', fee: 0.05, liquidity: 180000000, slippage: 0.05 }, // Growing TVL
+      { name: 'Uniswap V3', fee: 0.30, liquidity: 250000000, slippage: 0.04 },
+      { name: 'KyberSwap', fee: 0.20, liquidity: 90000000, slippage: 0.07 }
+    ]
   }
 ];
 
