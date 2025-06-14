@@ -26,12 +26,14 @@ import {
   Unlock,
   Trophy,
   BarChart3,
-  Settings2
+  Settings2,
+  TrendingDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import OptimizationDashboard from './optimization/OptimizationDashboard';
 import { useFeeOptimizer, OpportunityParams } from '@/hooks/useFeeOptimizer';
 import BatchExecutionPanel from './BatchExecutionPanel';
+import FeeReductionDashboard from './FeeReductionDashboard';
 
 interface FlashArbitrageOpportunity {
   id: string;
@@ -368,23 +370,32 @@ const ZeroCapitalArbitrage = () => {
            riskLevels[opp.riskLevel] <= maxRiskLevels[maxRiskLevel];
   });
 
+  // Add user volume tracking
+  const [userVolume, setUserVolume] = useState(250000); // Demo: $250K volume
+
   // 1. Use Fee Optimizer on current filtered opportunities
   const batchParams: OpportunityParams[] = filteredOpportunities.map((o) => ({
     requiredCapital: o.requiredCapital,
     pair: o.pair,
     buyDex: o.buyDex,
-    sellDex: o.sellDex
+    sellDex: o.sellDex,
+    userVolume: userVolume
   }));
-  const optimizedOpps = useFeeOptimizer(batchParams);
+  const optimizedOpps = useFeeOptimizer(batchParams, userVolume);
 
-  // Allow: batch together up to 3 compatible opps (same provider & same DEXs)
+  // Enhanced batch opportunities with better data
   const batchableOpps = optimizedOpps.map((opt, idx) => ({
     id: opportunities[idx].id,
-    label: `${opt.pair}: ${opt.optimalProvider.name}, ${opt.optimalBuyDex.name}/${opt.optimalSellDex.name}`,
-    netProfit:
-      (opportunities[idx].requiredCapital * opportunities[idx].spread) / 100 -
-      opt.computedFees.total,
-    canBatch: true // Basic demo: allow all. Expand batching logic as needed.
+    label: `${opt.pair}: ${opt.optimalProvider.name}`,
+    pair: opt.pair,
+    netProfit: (opportunities[idx].requiredCapital * opportunities[idx].spread) / 100 - opt.computedFees.total,
+    requiredCapital: opt.requiredCapital,
+    provider: opt.optimalProvider.name,
+    buyDex: opt.optimalBuyDex.name,
+    sellDex: opt.optimalSellDex.name,
+    canBatch: opt.batchCompatible,
+    estimatedGasSavings: opt.estimatedGasSavings,
+    batchGroup: `${opt.optimalProvider.name}-${opt.optimalBuyDex.name}-${opt.optimalSellDex.name}`
   }));
 
   // Batching logic
@@ -511,7 +522,7 @@ const ZeroCapitalArbitrage = () => {
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="arbitrage" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="arbitrage" className="flex items-center gap-2">
             <Target className="w-4 h-4" />
             Arbitrage Trading
@@ -519,6 +530,10 @@ const ZeroCapitalArbitrage = () => {
           <TabsTrigger value="optimization" className="flex items-center gap-2">
             <Settings2 className="w-4 h-4" />
             Advanced Optimizations
+          </TabsTrigger>
+          <TabsTrigger value="fee-reduction" className="flex items-center gap-2">
+            <TrendingDown className="w-4 h-4" />
+            Fee Optimization
           </TabsTrigger>
         </TabsList>
 
@@ -735,7 +750,7 @@ const ZeroCapitalArbitrage = () => {
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-muted-foreground">
                           Flash loan fee: ${op.computedFees.flashLoan.toFixed(2)} • 
-                          Trading fees: ${(op.computedFees.trading).toFixed(2)}
+                          Trading fees: {(op.computedFees.trading).toFixed(2)}
                         </div>
                         <Button 
                           onClick={() => executeFlashArbitrage(orig)}
@@ -760,7 +775,7 @@ const ZeroCapitalArbitrage = () => {
             </CardContent>
           </Card>
 
-          {/* Batch Execution Panel (Batch up to 3 opps) */}
+          {/* Enhanced Batch Execution Panel */}
           <BatchExecutionPanel
             opportunities={batchableOpps}
             maxBatch={3}
@@ -862,6 +877,13 @@ const ZeroCapitalArbitrage = () => {
 
         <TabsContent value="optimization" className="space-y-6">
           <OptimizationDashboard />
+        </TabsContent>
+
+        <TabsContent value="fee-reduction" className="space-y-6">
+          <FeeReductionDashboard 
+            optimizedOpportunities={optimizedOpps}
+            userVolume={userVolume}
+          />
         </TabsContent>
       </Tabs>
     </div>
