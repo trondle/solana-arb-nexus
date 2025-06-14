@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,12 @@ import {
   Clock,
   Shield,
   Target,
-  ArrowUpDown
+  ArrowUpDown,
+  TestTube,
+  Lock,
+  Unlock,
+  Trophy,
+  BarChart3
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -55,6 +59,16 @@ interface ArbitrageExecution {
   actualProfit: number;
   executionTime: number;
   timestamp: string;
+  isTestMode: boolean;
+}
+
+interface TestingStats {
+  totalTestExecutions: number;
+  successfulTests: number;
+  totalTestProfit: number;
+  averageTestProfit: number;
+  testingLevel: number;
+  virtualBalance: number;
 }
 
 const ZeroCapitalArbitrage = () => {
@@ -76,7 +90,31 @@ const ZeroCapitalArbitrage = () => {
   const [executionProgress, setExecutionProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   
+  // Testing Mode States
+  const [isTestMode, setIsTestMode] = useState(true);
+  const [testingStats, setTestingStats] = useState<TestingStats>({
+    totalTestExecutions: 0,
+    successfulTests: 0,
+    totalTestProfit: 0,
+    averageTestProfit: 0,
+    testingLevel: 1,
+    virtualBalance: 0
+  });
+  const [liveModeUnlocked, setLiveModeUnlocked] = useState(false);
+  const [showLiveModeWarning, setShowLiveModeWarning] = useState(false);
+  
   const [profitHistory, setProfitHistory] = useState<any[]>([]);
+
+  // Check if live mode should be unlocked based on testing performance
+  useEffect(() => {
+    const { totalTestExecutions, successfulTests } = testingStats;
+    const successRate = totalTestExecutions > 0 ? successfulTests / totalTestExecutions : 0;
+    
+    // Unlock live mode after 10+ successful tests with 80%+ success rate
+    if (totalTestExecutions >= 10 && successRate >= 0.8) {
+      setLiveModeUnlocked(true);
+    }
+  }, [testingStats]);
 
   useEffect(() => {
     const generateOpportunities = (): FlashArbitrageOpportunity[] => {
@@ -137,11 +175,23 @@ const ZeroCapitalArbitrage = () => {
   const executeFlashArbitrage = async (opportunity: FlashArbitrageOpportunity) => {
     if (isExecuting) return;
     
+    // Show warning for live mode
+    if (!isTestMode && !showLiveModeWarning) {
+      setShowLiveModeWarning(true);
+      return;
+    }
+    
     setIsExecuting(true);
     setExecutionProgress(0);
-    setCurrentStep('Initializing flash loan...');
+    setCurrentStep(isTestMode ? 'Simulating flash loan...' : 'Initializing flash loan...');
 
-    const steps = [
+    const steps = isTestMode ? [
+      'Simulating flash loan borrowing',
+      'Simulating buy order execution',
+      'Simulating sell order execution',
+      'Simulating loan repayment',
+      'Calculating simulated profit'
+    ] : [
       'Borrowing funds via flash loan',
       'Executing buy order',
       'Executing sell order',
@@ -155,7 +205,8 @@ const ZeroCapitalArbitrage = () => {
       status: 'pending',
       actualProfit: 0,
       executionTime: 0,
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
+      isTestMode
     };
 
     setExecutions(prev => [execution, ...prev.slice(0, 9)]);
@@ -165,7 +216,6 @@ const ZeroCapitalArbitrage = () => {
         setCurrentStep(steps[i]);
         setExecutionProgress((i + 1) * 20);
         
-        // Update execution status
         const status = i === 0 ? 'borrowing' : 
                      i === 1 ? 'buying' : 
                      i === 2 ? 'selling' : 
@@ -179,13 +229,37 @@ const ZeroCapitalArbitrage = () => {
           )
         );
         
-        await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 800));
+        // Faster execution in test mode
+        const delay = isTestMode ? 800 + Math.random() * 400 : 1200 + Math.random() * 800;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
 
-      // Simulate some slippage and real-world conditions
-      const slippageFactor = 0.985 + Math.random() * 0.025; // 1.5% to 2.5% slippage
-      const actualProfit = opportunity.netProfit * slippageFactor;
+      // Simulate realistic conditions
+      let slippageFactor = 0.985 + Math.random() * 0.025;
+      let actualProfit = opportunity.netProfit * slippageFactor;
+      
+      // In test mode, occasionally simulate failures for realism
+      const failureChance = isTestMode ? 0.15 : 0.05;
+      const failed = Math.random() < failureChance;
+      
+      if (failed) {
+        throw new Error('Simulated execution failure');
+      }
+
       const executionTime = 4000 + Math.random() * 2000;
+
+      // Update testing stats if in test mode
+      if (isTestMode) {
+        setTestingStats(prev => ({
+          ...prev,
+          totalTestExecutions: prev.totalTestExecutions + 1,
+          successfulTests: prev.successfulTests + 1,
+          totalTestProfit: prev.totalTestProfit + actualProfit,
+          averageTestProfit: (prev.totalTestProfit + actualProfit) / (prev.totalTestExecutions + 1),
+          virtualBalance: prev.virtualBalance + actualProfit,
+          testingLevel: Math.floor((prev.totalTestExecutions + 1) / 5) + 1
+        }));
+      }
 
       setExecutions(prev => 
         prev.map(exec => 
@@ -200,20 +274,30 @@ const ZeroCapitalArbitrage = () => {
         )
       );
 
-      // Add to profit history
       setProfitHistory(prev => [...prev.slice(-9), {
         time: new Date().toLocaleTimeString(),
         profit: actualProfit,
-        fees: opportunity.totalFees
+        fees: opportunity.totalFees,
+        isTest: isTestMode
       }]);
 
       toast({
-        title: "Flash Arbitrage Completed!",
-        description: `Net profit: $${actualProfit.toFixed(2)} (fees paid: $${opportunity.totalFees.toFixed(2)})`,
+        title: isTestMode ? "Test Arbitrage Completed!" : "Flash Arbitrage Completed!",
+        description: `${isTestMode ? 'Simulated' : 'Net'} profit: $${actualProfit.toFixed(2)} (fees ${isTestMode ? 'simulated' : 'paid'}: $${opportunity.totalFees.toFixed(2)})`,
         variant: actualProfit > 0 ? "default" : "destructive"
       });
 
     } catch (error) {
+      // Update testing stats for failures too
+      if (isTestMode) {
+        setTestingStats(prev => ({
+          ...prev,
+          totalTestExecutions: prev.totalTestExecutions + 1,
+          averageTestProfit: prev.totalTestExecutions > 0 ? prev.totalTestProfit / (prev.totalTestExecutions + 1) : 0,
+          testingLevel: Math.floor((prev.totalTestExecutions + 1) / 5) + 1
+        }));
+      }
+
       setExecutions(prev => 
         prev.map(exec => 
           exec.id === execution.id 
@@ -223,8 +307,8 @@ const ZeroCapitalArbitrage = () => {
       );
 
       toast({
-        title: "Arbitrage Failed",
-        description: "Flash loan execution failed. No funds lost.",
+        title: isTestMode ? "Test Arbitrage Failed" : "Arbitrage Failed",
+        description: isTestMode ? "Simulated execution failed. This helps you understand real risks." : "Flash loan execution failed. No funds lost.",
         variant: "destructive"
       });
     }
@@ -232,6 +316,12 @@ const ZeroCapitalArbitrage = () => {
     setIsExecuting(false);
     setExecutionProgress(0);
     setCurrentStep('');
+    setShowLiveModeWarning(false);
+  };
+
+  const confirmLiveMode = () => {
+    setShowLiveModeWarning(false);
+    // Continue with the execution that was interrupted
   };
 
   const getRiskColor = (level: string) => {
@@ -275,6 +365,151 @@ const ZeroCapitalArbitrage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Testing Mode Header */}
+      <Card className={`border-2 ${isTestMode ? 'border-blue-500' : 'border-orange-500'}`}>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isTestMode ? <TestTube className="w-5 h-5 text-blue-500" /> : <Zap className="w-5 h-5 text-orange-500" />}
+              {isTestMode ? 'Test Mode Active' : 'Live Trading Mode'}
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label>Test Mode</Label>
+                <Switch 
+                  checked={isTestMode}
+                  onCheckedChange={(checked) => {
+                    if (!checked && !liveModeUnlocked) {
+                      toast({
+                        title: "Live Mode Locked",
+                        description: "Complete 10+ test runs with 80%+ success rate to unlock live trading.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    setIsTestMode(checked);
+                  }}
+                  disabled={!liveModeUnlocked && !isTestMode}
+                />
+                <Label>Live Mode</Label>
+                {!liveModeUnlocked && <Lock className="w-4 h-4 text-gray-500" />}
+                {liveModeUnlocked && <Unlock className="w-4 h-4 text-green-500" />}
+              </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert className={isTestMode ? "border-blue-200 bg-blue-50" : "border-orange-200 bg-orange-50"}>
+            {isTestMode ? <TestTube className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            <AlertDescription>
+              {isTestMode ? (
+                <div>
+                  <strong>Safe Testing Environment:</strong> All executions are simulated with zero risk. 
+                  No real funds or fees involved. Perfect for learning and strategy testing.
+                  <br />
+                  <strong>Virtual Balance:</strong> ${testingStats.virtualBalance.toFixed(2)}
+                </div>
+              ) : (
+                <div>
+                  <strong>⚠️ LIVE TRADING MODE:</strong> Real funds and fees will be involved. 
+                  Ensure you understand the risks before proceeding.
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+
+          {isTestMode && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-500">{testingStats.totalTestExecutions}</div>
+                <div className="text-sm text-muted-foreground">Test Runs</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-500">
+                  {testingStats.totalTestExecutions > 0 ? 
+                    ((testingStats.successfulTests / testingStats.totalTestExecutions) * 100).toFixed(0) : 0}%
+                </div>
+                <div className="text-sm text-muted-foreground">Success Rate</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-500">${testingStats.averageTestProfit.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">Avg Profit</div>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  <span className="text-2xl font-bold text-yellow-500">{testingStats.testingLevel}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">Testing Level</div>
+              </div>
+            </div>
+          )}
+
+          {!liveModeUnlocked && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Lock className="w-4 h-4" />
+                <span className="font-semibold">Unlock Live Trading</span>
+              </div>
+              <div className="text-sm text-muted-foreground mb-2">
+                Requirements: 10+ test executions with 80%+ success rate
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Test Executions: {testingStats.totalTestExecutions}/10</span>
+                  <span>Success Rate: {testingStats.totalTestExecutions > 0 ? 
+                    ((testingStats.successfulTests / testingStats.totalTestExecutions) * 100).toFixed(0) : 0}%/80%</span>
+                </div>
+                <Progress value={Math.min((testingStats.totalTestExecutions / 10) * 100, 100)} />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Live Mode Warning Modal */}
+      {showLiveModeWarning && (
+        <Card className="border-red-500 bg-red-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Live Mode Confirmation Required
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert className="border-red-200">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>⚠️ WARNING:</strong> You are about to execute a live flash loan arbitrage with real funds. 
+                This involves actual financial risk including:
+                <ul className="mt-2 list-disc list-inside space-y-1">
+                  <li>Flash loan fees (~{selectedProvider === 'mango' ? '0.05' : selectedProvider === 'solend' ? '0.09' : '0.06'}%)</li>
+                  <li>Trading fees (~0.6%)</li>
+                  <li>Potential slippage and failed transactions</li>
+                  <li>Network congestion risks</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+            <div className="flex gap-3">
+              <Button 
+                onClick={confirmLiveMode}
+                variant="destructive"
+                className="flex-1"
+              >
+                I Understand the Risks - Execute Live
+              </Button>
+              <Button 
+                onClick={() => setShowLiveModeWarning(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Configuration Panel */}
       <Card>
         <CardHeader>
@@ -356,7 +591,7 @@ const ZeroCapitalArbitrage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 animate-pulse" />
-              Executing Flash Arbitrage
+              {isTestMode ? 'Executing Test Arbitrage' : 'Executing Flash Arbitrage'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -445,9 +680,9 @@ const ZeroCapitalArbitrage = () => {
                     onClick={() => executeFlashArbitrage(opportunity)}
                     disabled={isExecuting || opportunity.netProfit <= 0}
                     size="sm"
-                    className="bg-green-500 hover:bg-green-600"
+                    className={isTestMode ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"}
                   >
-                    Execute Flash Arbitrage
+                    {isTestMode ? 'Test Arbitrage' : 'Execute Flash Arbitrage'}
                   </Button>
                 </div>
               </div>
@@ -480,8 +715,11 @@ const ZeroCapitalArbitrage = () => {
                       <div className="flex items-center gap-2">
                         {getStatusIcon(execution.status)}
                         <div>
-                          <div className="font-semibold text-sm">
+                          <div className="font-semibold text-sm flex items-center gap-2">
                             {execution.opportunity.pair}
+                            {execution.isTestMode && (
+                              <Badge variant="outline" className="text-xs">TEST</Badge>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {execution.timestamp}
@@ -497,7 +735,9 @@ const ZeroCapitalArbitrage = () => {
                     {execution.status === 'completed' && (
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-muted-foreground">Profit: </span>
+                          <span className="text-muted-foreground">
+                            {execution.isTestMode ? 'Simulated' : 'Actual'} Profit: 
+                          </span>
                           <span className={`font-semibold ${execution.actualProfit > 0 ? 'text-green-500' : 'text-red-500'}`}>
                             ${execution.actualProfit.toFixed(2)}
                           </span>
@@ -519,7 +759,10 @@ const ZeroCapitalArbitrage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Profit History</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Profit History
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {profitHistory.length === 0 ? (
@@ -533,7 +776,12 @@ const ZeroCapitalArbitrage = () => {
                     <XAxis dataKey="time" />
                     <YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line dataKey="profit" stroke="var(--color-profit)" strokeWidth={2} />
+                    <Line 
+                      dataKey="profit" 
+                      stroke="var(--color-profit)" 
+                      strokeWidth={2}
+                      strokeDasharray={(data) => data?.isTest ? "5,5" : "0"}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
