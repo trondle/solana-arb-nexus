@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +7,8 @@ import ProfitCalculator from '@/components/dashboard/ProfitCalculator';
 import ConfigurationPanel from '@/components/dashboard/ConfigurationPanel';
 import OpportunityDetectionEngine from '@/components/dashboard/OpportunityDetectionEngine';
 import DetectionAlgorithms from '@/components/dashboard/DetectionAlgorithms';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu } from 'lucide-react';
+import TransactionSafetyValidator from '@/components/dashboard/TransactionSafetyValidator';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -52,7 +52,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -68,6 +68,10 @@ const Dashboard = () => {
             <TabsTrigger value="algorithms" className="flex items-center gap-2">
               <Cpu className="w-4 h-4" />
               Algorithms
+            </TabsTrigger>
+            <TabsTrigger value="safety" className="flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Safety Validator
             </TabsTrigger>
             <TabsTrigger value="calculator" className="flex items-center gap-2">
               <Calculator className="w-4 h-4" />
@@ -93,6 +97,10 @@ const Dashboard = () => {
 
           <TabsContent value="algorithms" className="space-y-6">
             <DetectionAlgorithms />
+          </TabsContent>
+
+          <TabsContent value="safety" className="space-y-6">
+            <TransactionSafetyValidator />
           </TabsContent>
 
           <TabsContent value="calculator" className="space-y-6">
