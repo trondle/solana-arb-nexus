@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,8 @@ import {
   Trophy,
   BarChart3,
   Settings2,
-  TrendingDown
+  TrendingDown,
+  Brain
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import OptimizationDashboard from './optimization/OptimizationDashboard';
