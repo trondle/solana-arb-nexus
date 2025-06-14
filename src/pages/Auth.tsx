@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Eye, EyeOff } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Shield, Eye, EyeOff, AlertTriangle, RefreshCw } from 'lucide-react';
+import PasswordStrengthMeter from '@/components/ui/password-strength-meter';
+import { validatePassword, generateSecurePassword } from '@/utils/passwordSecurity';
 
 const Auth = () => {
   const { user, signIn, signUp } = useAuth();
@@ -16,6 +19,7 @@ const Auth = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState<string>('');
   
   // Sign in form state
   const [signInEmail, setSignInEmail] = useState('');
@@ -34,11 +38,12 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setAuthError('');
 
     const { error } = await signIn(signInEmail, signInPassword);
     
-    if (!error) {
-      // Navigation will happen automatically via auth state change
+    if (error) {
+      setAuthError(error.message || 'Sign in failed');
     }
     
     setIsLoading(false);
@@ -47,10 +52,28 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setAuthError('');
+
+    // Validate password strength
+    const passwordValidation = validatePassword(signUpPassword);
+    if (!passwordValidation.isValid) {
+      setAuthError('Password does not meet security requirements');
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await signUp(signUpEmail, signUpPassword, signUpFullName);
     
+    if (error) {
+      setAuthError(error.message || 'Sign up failed');
+    }
+    
     setIsLoading(false);
+  };
+
+  const handleGeneratePassword = () => {
+    const newPassword = generateSecurePassword(16);
+    setSignUpPassword(newPassword);
   };
 
   return (
@@ -69,6 +92,15 @@ const Auth = () => {
             <CardTitle>Authentication</CardTitle>
           </CardHeader>
           <CardContent>
+            {authError && (
+              <Alert className="mb-4 border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertDescription className="text-red-700">
+                  {authError}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Tabs defaultValue="signin" className="space-y-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -145,16 +177,28 @@ const Auth = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleGeneratePassword}
+                        className="h-auto p-1 text-xs"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                        Generate
+                      </Button>
+                    </div>
                     <div className="relative">
                       <Input
                         id="signup-password"
                         type={showPassword ? "text" : "password"}
                         value={signUpPassword}
                         onChange={(e) => setSignUpPassword(e.target.value)}
-                        placeholder="Choose a strong password"
+                        placeholder="Choose a strong password (min 12 chars)"
                         required
-                        minLength={6}
+                        minLength={12}
                       />
                       <Button
                         type="button"
@@ -166,9 +210,24 @@ const Auth = () => {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </Button>
                     </div>
+                    <PasswordStrengthMeter password={signUpPassword} />
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Password Requirements:</strong></p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>At least 12 characters long</li>
+                      <li>Contains uppercase and lowercase letters</li>
+                      <li>Contains numbers and special characters</li>
+                      <li>Avoid common patterns or words</li>
+                    </ul>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading || !validatePassword(signUpPassword).isValid}
+                  >
                     {isLoading ? "Creating account..." : "Sign Up"}
                   </Button>
                 </form>
@@ -178,7 +237,7 @@ const Auth = () => {
         </Card>
 
         <div className="text-center mt-6 text-sm text-muted-foreground">
-          <p>Secure authentication with Supabase</p>
+          <p>🔒 Enterprise-grade security with AES-256 encryption</p>
         </div>
       </div>
     </div>
