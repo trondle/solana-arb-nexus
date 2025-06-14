@@ -14,7 +14,10 @@ import MEVTransactionBuilder from '@/components/dashboard/MEVTransactionBuilder'
 import ExecutionRelayNetwork from '@/components/dashboard/ExecutionRelayNetwork';
 import ProfitOptimizer from '@/components/dashboard/ProfitOptimizer';
 import AutoUpgradeSystem from '@/components/dashboard/AutoUpgradeSystem';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw } from 'lucide-react';
+import GasOptimizer from '@/components/dashboard/GasOptimizer';
+import AIPredictionEngine from '@/components/dashboard/AIPredictionEngine';
+import RiskManagement from '@/components/dashboard/RiskManagement';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -58,7 +61,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-12">
+          <TabsList className="grid w-full grid-cols-12 lg:grid-cols-15">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -74,6 +77,18 @@ const Dashboard = () => {
             <TabsTrigger value="algorithms" className="flex items-center gap-2">
               <Cpu className="w-4 h-4" />
               Algorithms
+            </TabsTrigger>
+            <TabsTrigger value="ai-prediction" className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              AI Prediction
+            </TabsTrigger>
+            <TabsTrigger value="risk-management" className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Risk Management
+            </TabsTrigger>
+            <TabsTrigger value="gas-optimizer" className="flex items-center gap-2">
+              <Fuel className="w-4 h-4" />
+              Gas Optimizer
             </TabsTrigger>
             <TabsTrigger value="safety" className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
@@ -123,6 +138,18 @@ const Dashboard = () => {
 
           <TabsContent value="algorithms" className="space-y-6">
             <DetectionAlgorithms />
+          </TabsContent>
+
+          <TabsContent value="ai-prediction" className="space-y-6">
+            <AIPredictionEngine />
+          </TabsContent>
+
+          <TabsContent value="risk-management" className="space-y-6">
+            <RiskManagement />
+          </TabsContent>
+
+          <TabsContent value="gas-optimizer" className="space-y-6">
+            <GasOptimizer />
           </TabsContent>
 
           <TabsContent value="safety" className="space-y-6">
