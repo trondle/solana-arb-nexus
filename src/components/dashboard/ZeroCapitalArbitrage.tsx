@@ -34,6 +34,7 @@ import OptimizationDashboard from './optimization/OptimizationDashboard';
 import { useFeeOptimizer, OpportunityParams } from '@/hooks/useFeeOptimizer';
 import BatchExecutionPanel from './BatchExecutionPanel';
 import FeeReductionDashboard from './FeeReductionDashboard';
+import MultiChainAIDashboard from './MultiChainAIDashboard';
 
 interface FlashArbitrageOpportunity {
   id: string;
@@ -522,7 +523,7 @@ const ZeroCapitalArbitrage = () => {
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="arbitrage" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="arbitrage" className="flex items-center gap-2">
             <Target className="w-4 h-4" />
             Arbitrage Trading
@@ -534,6 +535,10 @@ const ZeroCapitalArbitrage = () => {
           <TabsTrigger value="fee-reduction" className="flex items-center gap-2">
             <TrendingDown className="w-4 h-4" />
             Fee Optimization
+          </TabsTrigger>
+          <TabsTrigger value="multi-chain-ai" className="flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            Multi-Chain AI
           </TabsTrigger>
         </TabsList>
 
@@ -884,6 +889,10 @@ const ZeroCapitalArbitrage = () => {
             optimizedOpportunities={optimizedOpps}
             userVolume={userVolume}
           />
+        </TabsContent>
+
+        <TabsContent value="multi-chain-ai" className="space-y-6">
+          <MultiChainAIDashboard />
         </TabsContent>
       </Tabs>
     </div>
