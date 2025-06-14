@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,7 +24,8 @@ import ThreatDetection from '@/components/dashboard/ThreatDetection';
 import RegulatoryCompliance from '@/components/dashboard/RegulatoryCompliance';
 import EmergencyExit from '@/components/dashboard/EmergencyExit';
 import ColdStorageIntegration from '@/components/dashboard/ColdStorageIntegration';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot, FileText, TrendingDown, HardDrive } from 'lucide-react';
+import ZeroCapitalArbitrage from '@/components/dashboard/ZeroCapitalArbitrage';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot, FileText, TrendingDown, HardDrive, CircleDollarSign } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -75,8 +75,12 @@ const Dashboard = () => {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-12 lg:grid-cols-21">
+        <Tabs defaultValue="zero-capital" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-12 lg:grid-cols-22">
+            <TabsTrigger value="zero-capital" className="flex items-center gap-2">
+              <CircleDollarSign className="w-4 h-4" />
+              Zero Capital
+            </TabsTrigger>
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -160,8 +164,11 @@ const Dashboard = () => {
             <TabsTrigger value="cold-storage" className="flex items-center gap-2">
               <HardDrive className="w-4 h-4" />
               Cold Storage
-            </TabsTrigger>
-          </TabsList>
+            </TabsList>
+
+          <TabsContent value="zero-capital" className="space-y-6">
+            <ZeroCapitalArbitrage />
+          </TabsContent>
 
           <TabsContent value="monitoring" className="space-y-6">
             <PriceTracker />
