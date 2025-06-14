@@ -780,7 +780,6 @@ const ZeroCapitalArbitrage = () => {
                       dataKey="profit" 
                       stroke="var(--color-profit)" 
                       strokeWidth={2}
-                      strokeDasharray={(data) => data?.isTest ? "5,5" : "0"}
                     />
                   </LineChart>
                 </ResponsiveContainer>
