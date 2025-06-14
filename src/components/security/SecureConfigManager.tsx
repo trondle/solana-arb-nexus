@@ -11,7 +11,7 @@ import { useInputValidator } from './InputValidator';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SecureConfig {
-  id?: string;
+  id: string;
   configName: string;
   encryptedData: string;
   isActive: boolean;
@@ -49,7 +49,16 @@ const SecureConfigManager = () => {
 
       if (error) throw error;
       
-      setConfigs(data || []);
+      // Transform the data to match our SecureConfig interface
+      const transformedConfigs = data?.map(config => ({
+        id: config.id,
+        configName: config.config_name,
+        encryptedData: config.encrypted_private_key,
+        isActive: config.is_active,
+        lastModified: new Date(config.updated_at)
+      })) || [];
+      
+      setConfigs(transformedConfigs);
       logAction('secure_config_loaded');
     } catch (error) {
       console.error('Error loading configs:', error);
@@ -75,6 +84,7 @@ const SecureConfigManager = () => {
       walletAddress: newConfig.walletAddress,
       maxSlippage: newConfig.maxSlippage,
       maxGasPrice: newConfig.maxGasPrice,
+      amount: 1000, // Default amount for validation
       apiKey: newConfig.apiKey
     })) {
       return;
@@ -267,13 +277,13 @@ const SecureConfigManager = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleConfigVisibility(config.id!)}
+                      onClick={() => toggleConfigVisibility(config.id)}
                     >
-                      {showSensitiveData[config.id!] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showSensitiveData[config.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
                   </div>
                   
-                  {showSensitiveData[config.id!] ? (
+                  {showSensitiveData[config.id] ? (
                     <div className="text-sm space-y-1">
                       <p><strong>Wallet:</strong> {decryptSensitiveData(config.encryptedData).walletAddress || '••••••••'}</p>
                       <p><strong>API Key:</strong> {decryptSensitiveData(config.encryptedData).apiKey || '••••••••'}</p>
@@ -286,7 +296,7 @@ const SecureConfigManager = () => {
                   )}
                   
                   <p className="text-xs text-muted-foreground mt-2">
-                    Last modified: {new Date(config.lastModified).toLocaleString()}
+                    Last modified: {config.lastModified.toLocaleString()}
                   </p>
                 </div>
               ))
