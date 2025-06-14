@@ -44,6 +44,10 @@ export interface CrossChainOpportunity {
   executionTime: number;
   confidence: number;
   riskLevel: 'low' | 'medium' | 'high';
+  requiresCapital: number; // 0 for flash loan, actual amount for regular
+  flashLoanEnabled: boolean;
+  flashLoanProvider?: string;
+  flashLoanFee?: number;
 }
 
 const SUPPORTED_CHAINS: ChainConfig[] = [
@@ -125,6 +129,7 @@ export function useMultiChainManager() {
   const [chains, setChains] = useState<ChainConfig[]>(SUPPORTED_CHAINS);
   const [crossChainOpportunities, setCrossChainOpportunities] = useState<CrossChainOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [flashLoanMode, setFlashLoanMode] = useState(false);
 
   const enabledChains = useMemo(() => chains.filter(chain => chain.enabled), [chains]);
 
@@ -134,12 +139,27 @@ export function useMultiChainManager() {
     ));
   };
 
+  const getBestFlashLoanProvider = (chain: ChainConfig, amount: number) => {
+    const availableProviders = chain.flashLoanProviders.filter(
+      provider => provider.available && 
+                 amount >= provider.minAmount && 
+                 amount <= provider.maxAmount
+    );
+    
+    return availableProviders.sort((a, b) => {
+      const feeScore = a.fee - b.fee;
+      if (Math.abs(feeScore) < 0.001) {
+        return b.reliability - a.reliability;
+      }
+      return feeScore;
+    })[0];
+  };
+
   const scanCrossChainOpportunities = async () => {
     setIsScanning(true);
     
-    // Simulate cross-chain opportunity detection
     const opportunities: CrossChainOpportunity[] = [];
-    const pairs = ['USDC/USDT', 'ETH/USDC', 'BTC/USDC'];
+    const pairs = ['USDC/USDT', 'ETH/USDC', 'BTC/USDC', 'SOL/USDC'];
     
     for (let i = 0; i < enabledChains.length; i++) {
       for (let j = i + 1; j < enabledChains.length; j++) {
@@ -152,25 +172,57 @@ export function useMultiChainManager() {
           const bridgeFee = amount * 0.001; // 0.1% bridge fee
           const gasFeesTotal = fromChain.gasCost + toChain.gasCost;
           const networkFees = fromChain.networkFee + toChain.networkFee;
-          const totalFees = bridgeFee + gasFeesTotal + networkFees;
-          const estimatedProfit = amount * spread / 100;
-          const netProfit = estimatedProfit - totalFees;
           
-          if (netProfit > 5) {
+          // Generate both regular and flash loan opportunities
+          const baseOpportunity = {
+            fromChain: fromChain.name,
+            toChain: toChain.name,
+            pair,
+            spread,
+            bridgeFee,
+            executionTime: fromChain.blockTime + toChain.blockTime + 5000,
+            confidence: 70 + Math.random() * 25,
+            riskLevel: (spread > 2 ? 'low' : spread > 1 ? 'medium' : 'high') as 'low' | 'medium' | 'high'
+          };
+
+          // Regular cross-chain arbitrage (requires capital)
+          const regularTotalFees = bridgeFee + gasFeesTotal + networkFees;
+          const regularEstimatedProfit = amount * spread / 100;
+          const regularNetProfit = regularEstimatedProfit - regularTotalFees;
+          
+          if (regularNetProfit > 5) {
             opportunities.push({
-              id: `cross-${fromChain.id}-${toChain.id}-${index}`,
-              fromChain: fromChain.name,
-              toChain: toChain.name,
-              pair,
-              spread,
-              estimatedProfit,
-              bridgeFee,
-              totalFees,
-              netProfit,
-              executionTime: fromChain.blockTime + toChain.blockTime + 5000, // Bridge time
-              confidence: 70 + Math.random() * 25,
-              riskLevel: spread > 2 ? 'low' : spread > 1 ? 'medium' : 'high'
+              id: `cross-regular-${fromChain.id}-${toChain.id}-${index}`,
+              ...baseOpportunity,
+              estimatedProfit: regularEstimatedProfit,
+              totalFees: regularTotalFees,
+              netProfit: regularNetProfit,
+              requiresCapital: amount,
+              flashLoanEnabled: false
             });
+          }
+
+          // Flash loan cross-chain arbitrage (zero capital required)
+          const bestFromProvider = getBestFlashLoanProvider(fromChain, amount);
+          if (bestFromProvider && flashLoanMode) {
+            const flashLoanFee = amount * bestFromProvider.fee / 100;
+            const flashTotalFees = bridgeFee + gasFeesTotal + networkFees + flashLoanFee;
+            const flashEstimatedProfit = amount * spread / 100;
+            const flashNetProfit = flashEstimatedProfit - flashTotalFees;
+            
+            if (flashNetProfit > 3) { // Lower threshold for flash loans since capital efficiency is higher
+              opportunities.push({
+                id: `cross-flash-${fromChain.id}-${toChain.id}-${index}`,
+                ...baseOpportunity,
+                estimatedProfit: flashEstimatedProfit,
+                totalFees: flashTotalFees,
+                netProfit: flashNetProfit,
+                requiresCapital: 0,
+                flashLoanEnabled: true,
+                flashLoanProvider: bestFromProvider.name,
+                flashLoanFee
+              });
+            }
           }
         });
       }
@@ -186,14 +238,16 @@ export function useMultiChainManager() {
       const interval = setInterval(scanCrossChainOpportunities, 15000);
       return () => clearInterval(interval);
     }
-  }, [enabledChains.length]);
+  }, [enabledChains.length, flashLoanMode]);
 
   return {
     chains,
     enabledChains,
     crossChainOpportunities,
     isScanning,
+    flashLoanMode,
     toggleChain,
+    setFlashLoanMode,
     scanCrossChainOpportunities
   };
 }
