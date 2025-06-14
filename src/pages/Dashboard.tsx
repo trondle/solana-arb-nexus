@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,7 +13,8 @@ import FlashLoanProcessor from '@/components/dashboard/FlashLoanProcessor';
 import MEVTransactionBuilder from '@/components/dashboard/MEVTransactionBuilder';
 import ExecutionRelayNetwork from '@/components/dashboard/ExecutionRelayNetwork';
 import ProfitOptimizer from '@/components/dashboard/ProfitOptimizer';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target } from 'lucide-react';
+import AutoUpgradeSystem from '@/components/dashboard/AutoUpgradeSystem';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -56,7 +58,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
+          <TabsList className="grid w-full grid-cols-12">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -92,6 +94,10 @@ const Dashboard = () => {
             <TabsTrigger value="optimizer" className="flex items-center gap-2">
               <Target className="w-4 h-4" />
               Profit Optimizer
+            </TabsTrigger>
+            <TabsTrigger value="auto-upgrade" className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Auto-Upgrade
             </TabsTrigger>
             <TabsTrigger value="calculator" className="flex items-center gap-2">
               <Calculator className="w-4 h-4" />
@@ -137,6 +143,10 @@ const Dashboard = () => {
 
           <TabsContent value="optimizer" className="space-y-6">
             <ProfitOptimizer />
+          </TabsContent>
+
+          <TabsContent value="auto-upgrade" className="space-y-6">
+            <AutoUpgradeSystem />
           </TabsContent>
 
           <TabsContent value="calculator" className="space-y-6">
