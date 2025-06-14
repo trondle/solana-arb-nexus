@@ -10,6 +10,12 @@ export interface MarketCondition {
   trend: 'bullish' | 'bearish' | 'neutral';
 }
 
+export interface MarketConditions {
+  volatility: number;
+  liquidityIndex: number;
+  gasOptimization: number;
+}
+
 export interface TimingPrediction {
   score: number; // 0-100
   recommendation: 'execute_now' | 'wait_short' | 'wait_long' | 'skip';
@@ -29,6 +35,22 @@ export interface AIOptimizationStrategy {
   enabled: boolean;
   weight: number;
   performance: number;
+  currentScore: number;
+  profitIncrease: number;
+}
+
+export interface AIRecommendation {
+  action: string;
+  reason: string;
+  expectedProfit: number;
+  confidence: number;
+}
+
+export interface PerformanceStats {
+  profitIncrease: number;
+  successRate: number;
+  executedTrades: number;
+  totalProfit: number;
 }
 
 const AI_STRATEGIES: AIOptimizationStrategy[] = [
@@ -38,7 +60,9 @@ const AI_STRATEGIES: AIOptimizationStrategy[] = [
     description: 'Identifies optimal volatility periods for maximum spread opportunities',
     enabled: true,
     weight: 0.25,
-    performance: 87.3
+    performance: 87.3,
+    currentScore: 85.2,
+    profitIncrease: 12.4
   },
   {
     id: 'gas_optimization',
@@ -46,7 +70,9 @@ const AI_STRATEGIES: AIOptimizationStrategy[] = [
     description: 'Predicts optimal gas price windows to minimize costs',
     enabled: true,
     weight: 0.20,
-    performance: 92.1
+    performance: 92.1,
+    currentScore: 91.8,
+    profitIncrease: 8.7
   },
   {
     id: 'liquidity_analysis',
@@ -54,7 +80,9 @@ const AI_STRATEGIES: AIOptimizationStrategy[] = [
     description: 'Analyzes liquidity patterns to minimize slippage',
     enabled: true,
     weight: 0.20,
-    performance: 84.7
+    performance: 84.7,
+    currentScore: 82.3,
+    profitIncrease: 6.2
   },
   {
     id: 'market_momentum',
@@ -62,7 +90,9 @@ const AI_STRATEGIES: AIOptimizationStrategy[] = [
     description: 'Identifies market momentum shifts for timing advantage',
     enabled: true,
     weight: 0.15,
-    performance: 78.9
+    performance: 78.9,
+    currentScore: 76.1,
+    profitIncrease: 4.8
   },
   {
     id: 'competition_analysis',
@@ -70,7 +100,9 @@ const AI_STRATEGIES: AIOptimizationStrategy[] = [
     description: 'Analyzes MEV bot activity to avoid competition',
     enabled: false,
     weight: 0.10,
-    performance: 71.2
+    performance: 71.2,
+    currentScore: 68.5,
+    profitIncrease: 3.1
   },
   {
     id: 'cross_market_correlation',
@@ -78,25 +110,58 @@ const AI_STRATEGIES: AIOptimizationStrategy[] = [
     description: 'Uses correlations across markets for predictive timing',
     enabled: false,
     weight: 0.10,
-    performance: 69.4
+    performance: 69.4,
+    currentScore: 65.8,
+    profitIncrease: 2.9
   }
 ];
 
 export function useAITimingOptimizer() {
   const [strategies, setStrategies] = useState<AIOptimizationStrategy[]>(AI_STRATEGIES);
-  const [marketConditions, setMarketConditions] = useState<MarketCondition[]>([]);
+  const [marketConditionsList, setMarketConditionsList] = useState<MarketCondition[]>([]);
   const [currentPrediction, setCurrentPrediction] = useState<TimingPrediction | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [performanceStats, setPerformanceStats] = useState({
-    totalPredictions: 847,
-    accurateTimings: 723,
-    profitImprovement: 34.7,
-    riskReduction: 28.3
+  const [activeRecommendations, setActiveRecommendations] = useState<AIRecommendation[]>([
+    {
+      action: 'Execute ETH/USDC arbitrage on Ethereum→Solana',
+      reason: 'Optimal gas prices detected, high liquidity available',
+      expectedProfit: 2.3,
+      confidence: 87
+    },
+    {
+      action: 'Wait for better timing on BTC/USDT opportunity',
+      reason: 'High volatility period approaching in 5 minutes',
+      expectedProfit: 4.1,
+      confidence: 72
+    }
+  ]);
+  const [performance, setPerformance] = useState<PerformanceStats>({
+    profitIncrease: 34.7,
+    successRate: 85.3,
+    executedTrades: 127,
+    totalProfit: 12847
   });
 
   const enabledStrategies = useMemo(() => 
     strategies.filter(s => s.enabled), [strategies]
   );
+
+  const marketConditions = useMemo((): MarketConditions => {
+    const latest = marketConditionsList[marketConditionsList.length - 1];
+    if (!latest) {
+      return {
+        volatility: 15,
+        liquidityIndex: 75,
+        gasOptimization: 68
+      };
+    }
+    
+    return {
+      volatility: latest.volatility * 100,
+      liquidityIndex: Math.min(100, (latest.liquidityDepth / 10000)),
+      gasOptimization: Math.max(0, 100 - (latest.gasPrice / 2))
+    };
+  }, [marketConditionsList]);
 
   const toggleStrategy = (strategyId: string) => {
     setStrategies(prev => prev.map(strategy => 
@@ -134,7 +199,7 @@ export function useAITimingOptimizer() {
     // Simulate AI analysis delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    const currentCondition = marketConditions[marketConditions.length - 1];
+    const currentCondition = marketConditionsList[marketConditionsList.length - 1];
     if (!currentCondition) {
       setIsAnalyzing(false);
       return {
@@ -231,11 +296,11 @@ export function useAITimingOptimizer() {
       ...generateMarketConditions(),
       timestamp: Date.now() - (20 - i) * 30000
     }));
-    setMarketConditions(initialConditions);
+    setMarketConditionsList(initialConditions);
 
     // Update market conditions every 30 seconds
     const interval = setInterval(() => {
-      setMarketConditions(prev => [
+      setMarketConditionsList(prev => [
         ...prev.slice(-19),
         generateMarketConditions()
       ]);
@@ -246,20 +311,21 @@ export function useAITimingOptimizer() {
 
   // Auto-analyze timing when market conditions change
   useEffect(() => {
-    if (marketConditions.length > 0 && enabledStrategies.length > 0) {
-      const latestCondition = marketConditions[marketConditions.length - 1];
+    if (marketConditionsList.length > 0 && enabledStrategies.length > 0) {
+      const latestCondition = marketConditionsList[marketConditionsList.length - 1];
       // Simulate a dummy opportunity for analysis
       analyzeTimingOpportunity({}).then(setCurrentPrediction);
     }
-  }, [marketConditions.length, enabledStrategies.length]);
+  }, [marketConditionsList.length, enabledStrategies.length]);
 
   return {
     strategies,
     enabledStrategies,
-    marketConditions: marketConditions.slice(-10), // Last 10 conditions
+    marketConditions,
     currentPrediction,
     isAnalyzing,
-    performanceStats,
+    activeRecommendations,
+    performance,
     toggleStrategy,
     updateStrategyWeight,
     analyzeTimingOpportunity
