@@ -75,7 +75,7 @@ const OpportunityDetectionEngine = () => {
           signal,
           confidence,
           predictedProfit: spread * 50 + Math.random() * 100,
-          timeWindow: 30 + Math.random() * 120, // seconds
+          timeWindow: 30 + Math.random() * 120,
           riskFactors,
           detectionTime: new Date().toLocaleTimeString()
         });
@@ -208,7 +208,7 @@ const OpportunityDetectionEngine = () => {
           <CardContent>
             <div className="text-2xl font-bold">{metrics.averageLatency.toFixed(1)}ms</div>
             <p className="text-xs text-muted-foreground">
-              Target: <5ms
+              Target: &lt;5ms
             </p>
           </CardContent>
         </Card>
