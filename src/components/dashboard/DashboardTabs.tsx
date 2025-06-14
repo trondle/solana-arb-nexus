@@ -1,97 +1,60 @@
 
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot, FileText, TrendingDown, HardDrive, CircleDollarSign } from 'lucide-react';
+import { 
+  Zap, 
+  ShieldCheck, 
+  TrendingUp, 
+  Target, 
+  BarChart3,
+  Brain,
+  TestTube,
+  Layers,
+  Activity,
+  Lock
+} from 'lucide-react';
 
 const DashboardTabs = () => {
   return (
-    <TabsList className="grid w-full grid-cols-12 lg:grid-cols-22">
+    <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
       <TabsTrigger value="zero-capital" className="flex items-center gap-2">
-        <CircleDollarSign className="w-4 h-4" />
-        Zero Capital
-      </TabsTrigger>
-      <TabsTrigger value="monitoring" className="flex items-center gap-2">
-        <Activity className="w-4 h-4" />
-        Price Monitoring
-      </TabsTrigger>
-      <TabsTrigger value="opportunities" className="flex items-center gap-2">
-        <TrendingUp className="w-4 h-4" />
-        Opportunities
-      </TabsTrigger>
-      <TabsTrigger value="detection" className="flex items-center gap-2">
-        <Brain className="w-4 h-4" />
-        Detection Engine
-      </TabsTrigger>
-      <TabsTrigger value="algorithms" className="flex items-center gap-2">
-        <Cpu className="w-4 h-4" />
-        Algorithms
-      </TabsTrigger>
-      <TabsTrigger value="ai-prediction" className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4" />
-        AI Prediction
+        <Zap className="w-4 h-4" />
+        <span className="hidden md:inline">Zero Capital</span>
       </TabsTrigger>
       <TabsTrigger value="risk-management" className="flex items-center gap-2">
-        <AlertTriangle className="w-4 h-4" />
-        Risk Management
+        <ShieldCheck className="w-4 h-4" />
+        <span className="hidden md:inline">Risk Mgmt</span>
       </TabsTrigger>
-      <TabsTrigger value="gas-optimizer" className="flex items-center gap-2">
-        <Fuel className="w-4 h-4" />
-        Gas Optimizer
-      </TabsTrigger>
-      <TabsTrigger value="safety" className="flex items-center gap-2">
-        <Shield className="w-4 h-4" />
-        Safety Validator
-      </TabsTrigger>
-      <TabsTrigger value="flashloan" className="flex items-center gap-2">
-        <Zap className="w-4 h-4" />
-        Flash Loans
-      </TabsTrigger>
-      <TabsTrigger value="mev-builder" className="flex items-center gap-2">
-        <Hammer className="w-4 h-4" />
-        MEV Builder
-      </TabsTrigger>
-      <TabsTrigger value="relay-network" className="flex items-center gap-2">
-        <Network className="w-4 h-4" />
-        Relay Network
-      </TabsTrigger>
-      <TabsTrigger value="optimizer" className="flex items-center gap-2">
+      <TabsTrigger value="safety-validator" className="flex items-center gap-2">
         <Target className="w-4 h-4" />
-        Profit Optimizer
-      </TabsTrigger>
-      <TabsTrigger value="auto-upgrade" className="flex items-center gap-2">
-        <RefreshCw className="w-4 h-4" />
-        Auto-Upgrade
-      </TabsTrigger>
-      <TabsTrigger value="calculator" className="flex items-center gap-2">
-        <Calculator className="w-4 h-4" />
-        Calculator
-      </TabsTrigger>
-      <TabsTrigger value="settings" className="flex items-center gap-2">
-        <Settings className="w-4 h-4" />
-        Configuration
+        <span className="hidden md:inline">Safety</span>
       </TabsTrigger>
       <TabsTrigger value="circuit-breaker" className="flex items-center gap-2">
-        <ZapOff className="w-4 h-4" />
-        Circuit Breaker
+        <Activity className="w-4 h-4" />
+        <span className="hidden md:inline">Circuit</span>
       </TabsTrigger>
-      <TabsTrigger value="advanced-validation" className="flex items-center gap-2">
-        <Scan className="w-4 h-4" />
-        Advanced Validation
+      <TabsTrigger value="profit-optimizer" className="flex items-center gap-2">
+        <TrendingUp className="w-4 h-4" />
+        <span className="hidden md:inline">Optimizer</span>
       </TabsTrigger>
-      <TabsTrigger value="threat-detection" className="flex items-center gap-2">
-        <Bot className="w-4 h-4" />
-        Threat Detection
+      <TabsTrigger value="dynamic-risk" className="flex items-center gap-2">
+        <Brain className="w-4 h-4" />
+        <span className="hidden md:inline">Dynamic Risk</span>
       </TabsTrigger>
-      <TabsTrigger value="regulatory" className="flex items-center gap-2">
-        <FileText className="w-4 h-4" />
-        Regulatory
+      <TabsTrigger value="pre-execution" className="flex items-center gap-2">
+        <Lock className="w-4 h-4" />
+        <span className="hidden md:inline">Pre-Exec</span>
       </TabsTrigger>
-      <TabsTrigger value="emergency-exit" className="flex items-center gap-2">
-        <TrendingDown className="w-4 h-4" />
-        Emergency Exit
+      <TabsTrigger value="graduated-limits" className="flex items-center gap-2">
+        <BarChart3 className="w-4 h-4" />
+        <span className="hidden md:inline">Limits</span>
       </TabsTrigger>
-      <TabsTrigger value="cold-storage" className="flex items-center gap-2">
-        <HardDrive className="w-4 h-4" />
-        Cold Storage
+      <TabsTrigger value="simulation" className="flex items-center gap-2">
+        <TestTube className="w-4 h-4" />
+        <span className="hidden md:inline">Simulation</span>
+      </TabsTrigger>
+      <TabsTrigger value="safety-layers" className="flex items-center gap-2">
+        <Layers className="w-4 h-4" />
+        <span className="hidden md:inline">Safety Layers</span>
       </TabsTrigger>
     </TabsList>
   );
