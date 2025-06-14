@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Router,
   Globe,
-  Server
+  Server,
+  Settings
 } from 'lucide-react';
 
 interface RelayProvider {
