@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +11,8 @@ import DetectionAlgorithms from '@/components/dashboard/DetectionAlgorithms';
 import TransactionSafetyValidator from '@/components/dashboard/TransactionSafetyValidator';
 import FlashLoanProcessor from '@/components/dashboard/FlashLoanProcessor';
 import MEVTransactionBuilder from '@/components/dashboard/MEVTransactionBuilder';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer } from 'lucide-react';
+import ExecutionRelayNetwork from '@/components/dashboard/ExecutionRelayNetwork';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -54,7 +56,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -82,6 +84,10 @@ const Dashboard = () => {
             <TabsTrigger value="mev-builder" className="flex items-center gap-2">
               <Hammer className="w-4 h-4" />
               MEV Builder
+            </TabsTrigger>
+            <TabsTrigger value="relay-network" className="flex items-center gap-2">
+              <Network className="w-4 h-4" />
+              Relay Network
             </TabsTrigger>
             <TabsTrigger value="calculator" className="flex items-center gap-2">
               <Calculator className="w-4 h-4" />
@@ -119,6 +125,10 @@ const Dashboard = () => {
 
           <TabsContent value="mev-builder" className="space-y-6">
             <MEVTransactionBuilder />
+          </TabsContent>
+
+          <TabsContent value="relay-network" className="space-y-6">
+            <ExecutionRelayNetwork />
           </TabsContent>
 
           <TabsContent value="calculator" className="space-y-6">
