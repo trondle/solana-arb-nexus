@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +9,8 @@ import ConfigurationPanel from '@/components/dashboard/ConfigurationPanel';
 import OpportunityDetectionEngine from '@/components/dashboard/OpportunityDetectionEngine';
 import DetectionAlgorithms from '@/components/dashboard/DetectionAlgorithms';
 import TransactionSafetyValidator from '@/components/dashboard/TransactionSafetyValidator';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield } from 'lucide-react';
+import FlashLoanProcessor from '@/components/dashboard/FlashLoanProcessor';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -52,7 +54,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -72,6 +74,10 @@ const Dashboard = () => {
             <TabsTrigger value="safety" className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
               Safety Validator
+            </TabsTrigger>
+            <TabsTrigger value="flashloan" className="flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              Flash Loans
             </TabsTrigger>
             <TabsTrigger value="calculator" className="flex items-center gap-2">
               <Calculator className="w-4 h-4" />
@@ -101,6 +107,10 @@ const Dashboard = () => {
 
           <TabsContent value="safety" className="space-y-6">
             <TransactionSafetyValidator />
+          </TabsContent>
+
+          <TabsContent value="flashloan" className="space-y-6">
+            <FlashLoanProcessor />
           </TabsContent>
 
           <TabsContent value="calculator" className="space-y-6">
