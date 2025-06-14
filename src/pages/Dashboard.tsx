@@ -19,7 +19,10 @@ import RiskManagement from '@/components/dashboard/RiskManagement';
 import CircuitBreaker from '@/components/dashboard/CircuitBreaker';
 import AdvancedValidation from '@/components/dashboard/AdvancedValidation';
 import ThreatDetection from '@/components/dashboard/ThreatDetection';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot } from 'lucide-react';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot, FileText, TrendingDown, HardDrive } from 'lucide-react';
+import RegulatoryCompliance from '@/components/dashboard/RegulatoryCompliance';
+import EmergencyExit from '@/components/dashboard/EmergencyExit';
+import ColdStorageIntegration from '@/components/dashboard/ColdStorageIntegration';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -63,7 +66,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-12 lg:grid-cols-18">
+          <TabsList className="grid w-full grid-cols-12 lg:grid-cols-21">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -135,6 +138,18 @@ const Dashboard = () => {
             <TabsTrigger value="threat-detection" className="flex items-center gap-2">
               <Bot className="w-4 h-4" />
               Threat Detection
+            </TabsTrigger>
+            <TabsTrigger value="regulatory" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Regulatory
+            </TabsTrigger>
+            <TabsTrigger value="emergency-exit" className="flex items-center gap-2">
+              <TrendingDown className="w-4 h-4" />
+              Emergency Exit
+            </TabsTrigger>
+            <TabsTrigger value="cold-storage" className="flex items-center gap-2">
+              <HardDrive className="w-4 h-4" />
+              Cold Storage
             </TabsTrigger>
           </TabsList>
 
@@ -208,6 +223,18 @@ const Dashboard = () => {
 
           <TabsContent value="threat-detection" className="space-y-6">
             <ThreatDetection />
+          </TabsContent>
+
+          <TabsContent value="regulatory" className="space-y-6">
+            <RegulatoryCompliance />
+          </TabsContent>
+
+          <TabsContent value="emergency-exit" className="space-y-6">
+            <EmergencyExit />
+          </TabsContent>
+
+          <TabsContent value="cold-storage" className="space-y-6">
+            <ColdStorageIntegration />
           </TabsContent>
         </Tabs>
       </div>
