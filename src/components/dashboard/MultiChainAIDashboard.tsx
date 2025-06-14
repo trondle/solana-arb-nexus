@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMultiChainManager } from '@/hooks/useMultiChainManager';
 import { useAITimingOptimizer } from '@/hooks/useAITimingOptimizer';
@@ -67,14 +66,24 @@ const MultiChainAIDashboard = () => {
   const totalFlashLoanProfit = flashLoanOpportunities.reduce((sum, op) => sum + op.netProfit, 0);
   const totalRegularProfit = regularOpportunities.reduce((sum, op) => sum + op.netProfit, 0);
 
-  // Enhanced fee calculation with all components
+  // Enhanced fee calculation with correct opportunity amounts
   const getDetailedFees = (opportunity: any) => {
-    const amount = opportunity.requiresCapital || 50000; // Default amount for flash loans
-    const tradingFees = amount * 0.006; // 0.3% buy + 0.3% sell
+    // Use the actual opportunity amount - for flash loans use a reasonable amount based on the spread
+    const amount = opportunity.requiresCapital || (opportunity.spread > 0 ? 25000 + (opportunity.spread * 10000) : 50000);
+    
+    // Get trading fees from the opportunity's DEX configuration
+    const fromChain = chains.find(c => c.name === opportunity.fromChain);
+    const toChain = chains.find(c => c.name === opportunity.toChain);
+    
+    // Calculate trading fees based on actual DEX fees and amount
+    const fromDexFee = fromChain?.dexes?.[0]?.fee || 0.30; // Default to 0.30% if not found
+    const toDexFee = toChain?.dexes?.[0]?.fee || 0.30;
+    const tradingFees = amount * (fromDexFee + toDexFee) / 100;
+    
     const bridgeFees = amount * 0.001; // 0.1% bridge fee
-    const gasFees = 0.003 + 0.001; // ETH gas + target chain gas
+    const gasFees = (fromChain?.gasCost || 0.003) + (toChain?.gasCost || 0.001);
     const flashLoanFee = opportunity.flashLoanFee || 0;
-    const networkFees = 0.15 + 0.02; // Network fees
+    const networkFees = (fromChain?.networkFee || 0.15) + (toChain?.networkFee || 0.02);
     
     // Apply optimizations
     let optimizedTradingFees = tradingFees;
