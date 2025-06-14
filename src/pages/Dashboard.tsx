@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,7 +16,10 @@ import AutoUpgradeSystem from '@/components/dashboard/AutoUpgradeSystem';
 import GasOptimizer from '@/components/dashboard/GasOptimizer';
 import AIPredictionEngine from '@/components/dashboard/AIPredictionEngine';
 import RiskManagement from '@/components/dashboard/RiskManagement';
-import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle } from 'lucide-react';
+import CircuitBreaker from '@/components/dashboard/CircuitBreaker';
+import AdvancedValidation from '@/components/dashboard/AdvancedValidation';
+import ThreatDetection from '@/components/dashboard/ThreatDetection';
+import { Activity, TrendingUp, Calculator, Settings, Brain, Cpu, Shield, Zap, Hammer, Network, Target, RefreshCw, Fuel, Sparkles, AlertTriangle, ZapOff, Scan, Bot } from 'lucide-react';
 
 const Dashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
@@ -61,7 +63,7 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-12 lg:grid-cols-15">
+          <TabsList className="grid w-full grid-cols-12 lg:grid-cols-18">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               Price Monitoring
@@ -121,6 +123,18 @@ const Dashboard = () => {
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Configuration
+            </TabsTrigger>
+            <TabsTrigger value="circuit-breaker" className="flex items-center gap-2">
+              <ZapOff className="w-4 h-4" />
+              Circuit Breaker
+            </TabsTrigger>
+            <TabsTrigger value="advanced-validation" className="flex items-center gap-2">
+              <Scan className="w-4 h-4" />
+              Advanced Validation
+            </TabsTrigger>
+            <TabsTrigger value="threat-detection" className="flex items-center gap-2">
+              <Bot className="w-4 h-4" />
+              Threat Detection
             </TabsTrigger>
           </TabsList>
 
@@ -182,6 +196,18 @@ const Dashboard = () => {
 
           <TabsContent value="settings" className="space-y-6">
             <ConfigurationPanel />
+          </TabsContent>
+
+          <TabsContent value="circuit-breaker" className="space-y-6">
+            <CircuitBreaker />
+          </TabsContent>
+
+          <TabsContent value="advanced-validation" className="space-y-6">
+            <AdvancedValidation />
+          </TabsContent>
+
+          <TabsContent value="threat-detection" className="space-y-6">
+            <ThreatDetection />
           </TabsContent>
         </Tabs>
       </div>
