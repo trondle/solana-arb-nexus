@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,21 +13,9 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+import { Database } from '@/integrations/supabase/types';
 
-interface Transaction {
-  id: string;
-  transaction_hash: string | null;
-  transaction_type: 'deposit' | 'withdrawal';
-  chain_name: string;
-  token_symbol: string;
-  amount: number;
-  status: 'pending' | 'confirmed' | 'failed';
-  gas_fee: number | null;
-  created_at: string;
-  confirmed_at: string | null;
-  from_address: string | null;
-  to_address: string | null;
-}
+type Transaction = Database['public']['Tables']['crypto_transactions']['Row'];
 
 const TransactionHistory = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { ethers } from 'ethers';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +34,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const checkConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
+    if (typeof window !== 'undefined' && window.ethereum) {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.listAccounts();
@@ -54,7 +53,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setupEventListeners = () => {
-    if (typeof window.ethereum !== 'undefined') {
+    if (typeof window !== 'undefined' && window.ethereum) {
       window.ethereum.on('accountsChanged', handleAccountsChanged);
       window.ethereum.on('chainChanged', handleChainChanged);
     }
@@ -76,9 +75,11 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
   const updateBalance = async (walletAddress: string) => {
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const balance = await provider.getBalance(walletAddress);
-      setBalance(ethers.formatEther(balance));
+      if (window.ethereum) {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const balance = await provider.getBalance(walletAddress);
+        setBalance(ethers.formatEther(balance));
+      }
     } catch (error) {
       console.error('Error updating balance:', error);
     }
@@ -86,16 +87,18 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
   const updateChainId = async () => {
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const network = await provider.getNetwork();
-      setChainId(Number(network.chainId));
+      if (window.ethereum) {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const network = await provider.getNetwork();
+        setChainId(Number(network.chainId));
+      }
     } catch (error) {
       console.error('Error getting chain ID:', error);
     }
   };
 
   const connectWallet = async () => {
-    if (typeof window.ethereum === 'undefined') {
+    if (typeof window === 'undefined' || !window.ethereum) {
       toast({
         title: "MetaMask not found",
         description: "Please install MetaMask to connect your wallet.",
@@ -161,7 +164,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deposit = async (amount: string, tokenSymbol: string = 'ETH') => {
-    if (!isConnected || !address || !user) return;
+    if (!isConnected || !address || !user || !window.ethereum) return;
 
     try {
       setLoading(true);
@@ -282,10 +285,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
   const switchNetwork = async (targetChainId: number) => {
     try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${targetChainId.toString(16)}` }],
-      });
+      if (window.ethereum) {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+        });
+      }
     } catch (error: any) {
       if (error.code === 4902) {
         toast({
