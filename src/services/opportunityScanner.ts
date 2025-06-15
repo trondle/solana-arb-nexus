@@ -1,3 +1,4 @@
+
 import { ChainConfig } from '../config/types';
 import { getOptimizedCrossChainArbitrage, calculateOptimizedFees } from '../utils/flashLoanOptimizer';
 import { BridgeOptimizer } from '../utils/bridgeOptimizer';
@@ -98,7 +99,7 @@ export const scanCrossChainOpportunities = async (
                 estimatedProfit: amount * spread / 100,
                 totalFees: optimization.totalFees,
                 netProfit: flashNetProfit,
-                requiresCapital: 0,
+                requiresCapital: amount, // Store the actual amount needed for calculations
                 flashLoanEnabled: true,
                 flashLoanProvider: optimization.flashLoanQuote.provider.name,
                 flashLoanFee: amount * optimization.flashLoanQuote.effectiveFee / 100

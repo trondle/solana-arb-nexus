@@ -44,7 +44,7 @@ const FlashLoanOpportunities = ({
     // Apply filters
     if (filterBy === 'low-fees') {
       filtered = filtered.filter(opp => {
-        const optimizedFees = calculateOptimizedFees(opp, 250000);
+        const optimizedFees = calculateOptimizedFees(opp, opp.requiresCapital || 50000);
         return optimizedFees.total < opp.estimatedProfit * 0.3; // Fees less than 30% of profit
       });
     } else if (filterBy === 'high-profit') {
@@ -61,7 +61,7 @@ const FlashLoanOpportunities = ({
     if (maxFees) {
       const maxFeesNum = parseFloat(maxFees);
       filtered = filtered.filter(opp => {
-        const optimizedFees = calculateOptimizedFees(opp, 250000);
+        const optimizedFees = calculateOptimizedFees(opp, opp.requiresCapital || 50000);
         return optimizedFees.total <= maxFeesNum;
       });
     }
@@ -72,8 +72,8 @@ const FlashLoanOpportunities = ({
 
       switch (sortBy) {
         case 'fees':
-          const feesA = calculateOptimizedFees(a, 250000).total;
-          const feesB = calculateOptimizedFees(b, 250000).total;
+          const feesA = calculateOptimizedFees(a, a.requiresCapital || 50000).total;
+          const feesB = calculateOptimizedFees(b, b.requiresCapital || 50000).total;
           valueA = feesA;
           valueB = feesB;
           break;
@@ -142,7 +142,7 @@ const FlashLoanOpportunities = ({
               <div>
                 <div className="text-2xl font-bold text-purple-600">
                   {flashLoanOpportunities.reduce((sum, opp) => {
-                    const fees = calculateOptimizedFees(opp, 250000);
+                    const fees = calculateOptimizedFees(opp, opp.requiresCapital || 50000);
                     return sum + fees.savings;
                   }, 0).toFixed(2)}
                 </div>
@@ -279,7 +279,8 @@ const FlashLoanOpportunities = ({
             </div>
             
             {filteredAndSortedOpportunities.map((opportunity) => {
-              const optimizedFees = calculateOptimizedFees(opportunity, 250000);
+              const actualAmount = opportunity.requiresCapital || 50000;
+              const optimizedFees = calculateOptimizedFees(opportunity, actualAmount);
               const optimizedProfit = opportunity.estimatedProfit - optimizedFees.total;
               
               return (
@@ -303,7 +304,7 @@ const FlashLoanOpportunities = ({
                   
                   {/* Enhanced Fee Breakdown with Optimization Details */}
                   <div className="bg-gradient-to-r from-gray-50 to-green-50 rounded-lg p-3 mb-3 border border-green-200">
-                    <div className="text-xs font-semibold mb-2 text-green-800">💰 Optimized Fee Breakdown</div>
+                    <div className="text-xs font-semibold mb-2 text-green-800">💰 Optimized Fee Breakdown (${actualAmount.toLocaleString()} capital)</div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="flex justify-between">
                         <span>Flash Loan Fee (20% discount):</span>

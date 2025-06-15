@@ -117,7 +117,7 @@ export const getOptimizedCrossChainArbitrage = (
 
 export const calculateOptimizedFees = (
   opportunity: any,
-  userVolume: number = 0
+  actualAmount?: number
 ): {
   flashLoan: number;
   trading: number;
@@ -127,9 +127,11 @@ export const calculateOptimizedFees = (
   savings: number;
   breakdown: Record<string, number>;
 } => {
-  const amount = opportunity.requiredCapital || 50000;
+  // Use the actual amount from the opportunity, or the passed amount, or fallback
+  const amount = actualAmount || opportunity.requiresCapital || opportunity.requiredCapital || 50000;
   
-  // Use optimized calculations
+  // Use optimized calculations with realistic volume-based discounts
+  const userVolume = 250000; // Demo volume for calculations
   const flashLoanDiscount = userVolume > 100000 ? 0.2 : userVolume > 50000 ? 0.1 : 0;
   const tradingDiscount = userVolume > 500000 ? 0.15 : userVolume > 100000 ? 0.08 : 0;
   
@@ -140,7 +142,7 @@ export const calculateOptimizedFees = (
   
   const total = flashLoan + trading + bridge + gas;
   
-  // Calculate savings
+  // Calculate savings compared to non-optimized fees
   const baselineFlashLoan = amount * 0.09 / 100;
   const baselineTrading = amount * 0.6 / 100;
   const baselineBridge = amount * 0.1 / 100;
