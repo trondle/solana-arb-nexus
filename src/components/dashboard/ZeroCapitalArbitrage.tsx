@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,8 @@ import {
   BarChart3,
   Settings2,
   TrendingDown,
-  Brain
+  Brain,
+  GraduationCap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import OptimizationDashboard from './optimization/OptimizationDashboard';
@@ -37,6 +37,9 @@ import { useFeeOptimizer, OpportunityParams } from '@/hooks/useFeeOptimizer';
 import BatchExecutionPanel from './BatchExecutionPanel';
 import FeeReductionDashboard from './FeeReductionDashboard';
 import MultiChainAIDashboard from './MultiChainAIDashboard';
+import MicroArbitrageMode from './MicroArbitrageMode';
+import SmartTimingEngine from './SmartTimingEngine';
+import ProgressiveCapitalMode from './ProgressiveCapitalMode';
 
 interface FlashArbitrageOpportunity {
   id: string;
@@ -115,6 +118,18 @@ const ZeroCapitalArbitrage = () => {
   
   const [profitHistory, setProfitHistory] = useState<any[]>([]);
 
+  // New states for enhanced features
+  const [microModeActive, setMicroModeActive] = useState(false);
+  const [smartTimingEnabled, setSmartTimingEnabled] = useState(false);
+  const [selectedMicroMode, setSelectedMicroMode] = useState('beginner');
+  const [traderStats, setTraderStats] = useState({
+    totalTrades: 3,
+    successfulTrades: 2,
+    totalProfit: 8.50,
+    currentLevel: 1,
+    unlockedFeatures: ['Micro-arbitrage only', 'Educational tooltips']
+  });
+
   // Check if live mode should be unlocked based on testing performance
   useEffect(() => {
     const { totalTestExecutions, successfulTests } = testingStats;
@@ -181,6 +196,15 @@ const ZeroCapitalArbitrage = () => {
 
     return () => clearInterval(interval);
   }, [selectedProvider, providers]);
+
+  const handleLevelUp = (newLevel: number) => {
+    setTraderStats(prev => ({ ...prev, currentLevel: newLevel }));
+    toast({
+      title: "🎉 Level Up!",
+      description: `Congratulations! You've reached Level ${newLevel}. New features unlocked!`,
+      variant: "default"
+    });
+  };
 
   const executeFlashArbitrage = async (opportunity: FlashArbitrageOpportunity) => {
     if (isExecuting) return;
@@ -268,6 +292,21 @@ const ZeroCapitalArbitrage = () => {
           averageTestProfit: (prev.totalTestProfit + actualProfit) / (prev.totalTestExecutions + 1),
           virtualBalance: prev.virtualBalance + actualProfit,
           testingLevel: Math.floor((prev.totalTestExecutions + 1) / 5) + 1
+        }));
+      }
+
+      // Update trader stats after successful execution
+      if (!failed && actualProfit > 0) {
+        setTraderStats(prev => ({
+          ...prev,
+          totalTrades: prev.totalTrades + 1,
+          successfulTrades: prev.successfulTrades + 1,
+          totalProfit: prev.totalProfit + actualProfit
+        }));
+      } else if (failed) {
+        setTraderStats(prev => ({
+          ...prev,
+          totalTrades: prev.totalTrades + 1
         }));
       }
 
@@ -422,117 +461,132 @@ const ZeroCapitalArbitrage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Testing Mode Header */}
-      <Card className={`border-2 ${isTestMode ? 'border-blue-500' : 'border-orange-500'}`}>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isTestMode ? <TestTube className="w-5 h-5 text-blue-500" /> : <Zap className="w-5 h-5 text-orange-500" />}
-              {isTestMode ? 'Test Mode Active' : 'Live Trading Mode'}
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label>Test Mode</Label>
-                <Switch 
-                  checked={isTestMode}
-                  onCheckedChange={(checked) => {
-                    if (!checked && !liveModeUnlocked) {
-                      toast({
-                        title: "Live Mode Locked",
-                        description: "Complete 10+ test runs with 80%+ success rate to unlock live trading.",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
-                    setIsTestMode(checked);
-                  }}
-                  disabled={!liveModeUnlocked && !isTestMode}
-                />
-                <Label>Live Mode</Label>
-                {!liveModeUnlocked && <Lock className="w-4 h-4 text-gray-500" />}
-                {liveModeUnlocked && <Unlock className="w-4 h-4 text-green-500" />}
-              </div>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert className={isTestMode ? "border-blue-200 bg-blue-50" : "border-orange-200 bg-orange-50"}>
-            {isTestMode ? <TestTube className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-            <AlertDescription>
-              {isTestMode ? (
-                <div>
-                  <strong>Safe Testing Environment:</strong> All executions are simulated with zero risk. 
-                  No real funds or fees involved. Perfect for learning and strategy testing.
-                  <br />
-                  <strong>Virtual Balance:</strong> ${testingStats.virtualBalance.toFixed(2)} | 
-                  <strong> Optimizations Active:</strong> Lightning speed, multi-DEX monitoring, slippage protection
+      {/* Enhanced Testing Mode Header with Progressive Capital */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          {/* Testing Mode Header */}
+          <Card className={`border-2 ${isTestMode ? 'border-blue-500' : 'border-orange-500'}`}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isTestMode ? <TestTube className="w-5 h-5 text-blue-500" /> : <Zap className="w-5 h-5 text-orange-500" />}
+                  {isTestMode ? 'Test Mode Active' : 'Live Trading Mode'}
                 </div>
-              ) : (
-                <div>
-                  <strong>⚠️ LIVE TRADING MODE:</strong> Real funds and fees will be involved. 
-                  Ensure you understand the risks before proceeding.
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label>Test Mode</Label>
+                    <Switch 
+                      checked={isTestMode}
+                      onCheckedChange={(checked) => {
+                        if (!checked && !liveModeUnlocked) {
+                          toast({
+                            title: "Live Mode Locked",
+                            description: "Complete 10+ test runs with 80%+ success rate to unlock live trading.",
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        setIsTestMode(checked);
+                      }}
+                      disabled={!liveModeUnlocked && !isTestMode}
+                    />
+                    <Label>Live Mode</Label>
+                    {!liveModeUnlocked && <Lock className="w-4 h-4 text-gray-500" />}
+                    {liveModeUnlocked && <Unlock className="w-4 h-4 text-green-500" />}
+                  </div>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Alert className={isTestMode ? "border-blue-200 bg-blue-50" : "border-orange-200 bg-orange-50"}>
+                {isTestMode ? <TestTube className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                <AlertDescription>
+                  {isTestMode ? (
+                    <div>
+                      <strong>Safe Testing Environment:</strong> All executions are simulated with zero risk. 
+                      No real funds or fees involved. Perfect for learning and strategy testing.
+                      <br />
+                      <strong>Virtual Balance:</strong> ${testingStats.virtualBalance.toFixed(2)} | 
+                      <strong> Optimizations Active:</strong> Lightning speed, multi-DEX monitoring, slippage protection
+                    </div>
+                  ) : (
+                    <div>
+                      <strong>⚠️ LIVE TRADING MODE:</strong> Real funds and fees will be involved. 
+                      Ensure you understand the risks before proceeding.
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-500">{testingStats.totalTestExecutions}</div>
+                  <div className="text-sm text-muted-foreground">Test Runs</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-500">
+                    {testingStats.totalTestExecutions > 0 ? 
+                      ((testingStats.successfulTests / testingStats.totalTestExecutions) * 100).toFixed(0) : 0}%
+                  </div>
+                  <div className="text-sm text-muted-foreground">Success Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-500">${testingStats.averageTestProfit.toFixed(2)}</div>
+                  <div className="text-sm text-muted-foreground">Avg Profit</div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    <span className="text-2xl font-bold text-yellow-500">{testingStats.testingLevel}</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">Testing Level</div>
+                </div>
+              </div>
+
+              {!liveModeUnlocked && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lock className="w-4 h-4" />
+                    <span className="font-semibold">Unlock Live Trading</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Requirements: 10+ test executions with 80%+ success rate
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>Test Executions: {testingStats.totalTestExecutions}/10</span>
+                      <span>Success Rate: {testingStats.totalTestExecutions > 0 ? 
+                        ((testingStats.successfulTests / testingStats.totalTestExecutions) * 100).toFixed(0) : 0}%/80%</span>
+                    </div>
+                    <Progress value={Math.min((testingStats.totalTestExecutions / 10) * 100, 100)} />
+                  </div>
                 </div>
               )}
-            </AlertDescription>
-          </Alert>
+            </CardContent>
+          </Card>
+        </div>
+        <div>
+          <ProgressiveCapitalMode 
+            traderStats={traderStats}
+            onLevelUp={handleLevelUp}
+          />
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-500">{testingStats.totalTestExecutions}</div>
-              <div className="text-sm text-muted-foreground">Test Runs</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-500">
-                {testingStats.totalTestExecutions > 0 ? 
-                  ((testingStats.successfulTests / testingStats.totalTestExecutions) * 100).toFixed(0) : 0}%
-              </div>
-              <div className="text-sm text-muted-foreground">Success Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-500">${testingStats.averageTestProfit.toFixed(2)}</div>
-              <div className="text-sm text-muted-foreground">Avg Profit</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1">
-                <Trophy className="w-5 h-5 text-yellow-500" />
-                <span className="text-2xl font-bold text-yellow-500">{testingStats.testingLevel}</span>
-              </div>
-              <div className="text-sm text-muted-foreground">Testing Level</div>
-            </div>
-          </div>
-
-          {!liveModeUnlocked && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Lock className="w-4 h-4" />
-                <span className="font-semibold">Unlock Live Trading</span>
-              </div>
-              <div className="text-sm text-muted-foreground mb-2">
-                Requirements: 10+ test executions with 80%+ success rate
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>Test Executions: {testingStats.totalTestExecutions}/10</span>
-                  <span>Success Rate: {testingStats.totalTestExecutions > 0 ? 
-                    ((testingStats.successfulTests / testingStats.totalTestExecutions) * 100).toFixed(0) : 0}%/80%</span>
-                </div>
-                <Progress value={Math.min((testingStats.totalTestExecutions / 10) * 100, 100)} />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Main Content with Tabs */}
-      <Tabs defaultValue="arbitrage" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      {/* Main Content with Enhanced Tabs */}
+      <Tabs defaultValue="micro-arbitrage" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="micro-arbitrage" className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" />
+            Micro Trading
+          </TabsTrigger>
           <TabsTrigger value="arbitrage" className="flex items-center gap-2">
             <Target className="w-4 h-4" />
-            Arbitrage Trading
+            Advanced Trading
           </TabsTrigger>
           <TabsTrigger value="optimization" className="flex items-center gap-2">
             <Settings2 className="w-4 h-4" />
-            Advanced Optimizations
+            Optimizations
           </TabsTrigger>
           <TabsTrigger value="fee-reduction" className="flex items-center gap-2">
             <TrendingDown className="w-4 h-4" />
@@ -543,6 +597,54 @@ const ZeroCapitalArbitrage = () => {
             Multi-Chain AI
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="micro-arbitrage" className="space-y-6">
+          <MicroArbitrageMode 
+            isActive={microModeActive}
+            onToggle={setMicroModeActive}
+            onModeChange={setSelectedMicroMode}
+            opportunities={filteredOpportunities}
+            onExecute={executeFlashArbitrage}
+          />
+
+          <SmartTimingEngine 
+            enabled={smartTimingEnabled}
+            onToggle={setSmartTimingEnabled}
+            chains={['Base', 'Fantom', 'Polygon', 'Arbitrum']}
+          />
+
+          {/* Beginner-friendly stats and guidance */}
+          <Card className="border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-green-600" />
+                Beginner Success Metrics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {((traderStats.totalProfit / Math.max(traderStats.totalTrades * 500, 1)) * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-sm text-muted-foreground">Avg ROI</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    ${(traderStats.totalProfit / Math.max(traderStats.successfulTrades, 1)).toFixed(2)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Avg Profit</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {traderStats.totalTrades > 0 ? ((traderStats.successfulTrades / traderStats.totalTrades) * 100).toFixed(0) : 0}%
+                  </div>
+                  <div className="text-sm text-muted-foreground">Success Rate</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="arbitrage" className="space-y-6">
           {/* Live Mode Warning Modal */}
