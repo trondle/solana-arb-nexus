@@ -1,10 +1,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
-import { SUPPORTED_CHAINS, ChainConfig } from '../config/chainConfigurations';
+import { SUPPORTED_CHAINS } from '../config/chainConfigurations';
+import { ChainConfig } from '../config/types';
 import { scanCrossChainOpportunities, CrossChainOpportunity } from '../services/opportunityScanner';
 import { getBestFlashLoanProvider, getBestDexRoute } from '../utils/flashLoanOptimizer';
 
-export type { ChainConfig } from '../config/chainConfigurations';
+export type { ChainConfig } from '../config/types';
 export type { CrossChainOpportunity } from '../services/opportunityScanner';
 
 export function useMultiChainManager() {

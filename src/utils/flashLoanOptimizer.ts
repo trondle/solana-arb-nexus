@@ -1,5 +1,4 @@
-
-import { ChainConfig, FlashLoanProvider, DEXConfig } from '../config/chainConfigurations';
+import { ChainConfig, FlashLoanProvider, DEXConfig } from '../config/types';
 
 export const getBestFlashLoanProvider = (chain: ChainConfig, amount: number): FlashLoanProvider | undefined => {
   const availableProviders = chain.flashLoanProviders.filter(

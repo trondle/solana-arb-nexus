@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Globe, Zap } from 'lucide-react';
-import { ChainConfig } from '@/hooks/useMultiChainManager';
+import { ChainConfig } from '@/config/types';
 
 interface MultiChainOverviewProps {
   enabledChains: ChainConfig[];

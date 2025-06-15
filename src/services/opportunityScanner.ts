@@ -1,5 +1,5 @@
 
-import { ChainConfig } from '../config/chainConfigurations';
+import { ChainConfig } from '../config/types';
 import { getBestFlashLoanProvider, getBestDexRoute } from '../utils/flashLoanOptimizer';
 
 export interface CrossChainOpportunity {
