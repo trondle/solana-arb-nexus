@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +43,9 @@ const FlashLoanOpportunities = ({
     // Apply filters
     if (filterBy === 'low-fees') {
       filtered = filtered.filter(opp => {
-        const optimizedFees = calculateOptimizedFees(opp, opp.requiresCapital || 50000);
+        // FIXED: Use actualAmount instead of fallback
+        const actualAmount = opp.actualAmount || opp.requiresCapital;
+        const optimizedFees = calculateOptimizedFees(opp, actualAmount);
         return optimizedFees.total < opp.estimatedProfit * 0.3; // Fees less than 30% of profit
       });
     } else if (filterBy === 'high-profit') {
@@ -61,7 +62,9 @@ const FlashLoanOpportunities = ({
     if (maxFees) {
       const maxFeesNum = parseFloat(maxFees);
       filtered = filtered.filter(opp => {
-        const optimizedFees = calculateOptimizedFees(opp, opp.requiresCapital || 50000);
+        // FIXED: Use actualAmount instead of fallback
+        const actualAmount = opp.actualAmount || opp.requiresCapital;
+        const optimizedFees = calculateOptimizedFees(opp, actualAmount);
         return optimizedFees.total <= maxFeesNum;
       });
     }
@@ -72,8 +75,11 @@ const FlashLoanOpportunities = ({
 
       switch (sortBy) {
         case 'fees':
-          const feesA = calculateOptimizedFees(a, a.requiresCapital || 50000).total;
-          const feesB = calculateOptimizedFees(b, b.requiresCapital || 50000).total;
+          // FIXED: Use actualAmount for both opportunities
+          const actualAmountA = a.actualAmount || a.requiresCapital;
+          const actualAmountB = b.actualAmount || b.requiresCapital;
+          const feesA = calculateOptimizedFees(a, actualAmountA).total;
+          const feesB = calculateOptimizedFees(b, actualAmountB).total;
           valueA = feesA;
           valueB = feesB;
           break;
@@ -142,7 +148,9 @@ const FlashLoanOpportunities = ({
               <div>
                 <div className="text-2xl font-bold text-purple-600">
                   {flashLoanOpportunities.reduce((sum, opp) => {
-                    const fees = calculateOptimizedFees(opp, opp.requiresCapital || 50000);
+                    // FIXED: Use actualAmount instead of fallback
+                    const actualAmount = opp.actualAmount || opp.requiresCapital;
+                    const fees = calculateOptimizedFees(opp, actualAmount);
                     return sum + fees.savings;
                   }, 0).toFixed(2)}
                 </div>
@@ -279,7 +287,8 @@ const FlashLoanOpportunities = ({
             </div>
             
             {filteredAndSortedOpportunities.map((opportunity) => {
-              const actualAmount = opportunity.requiresCapital || 50000;
+              // CRITICAL FIX: Use actualAmount instead of fallback
+              const actualAmount = opportunity.actualAmount || opportunity.requiresCapital;
               const optimizedFees = calculateOptimizedFees(opportunity, actualAmount);
               const optimizedProfit = opportunity.estimatedProfit - optimizedFees.total;
               

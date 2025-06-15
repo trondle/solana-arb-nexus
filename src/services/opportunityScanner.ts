@@ -22,6 +22,8 @@ export interface CrossChainOpportunity {
   flashLoanEnabled: boolean;
   flashLoanProvider?: string;
   flashLoanFee?: number;
+  // NEW: Store the actual trading amount for fee calculations
+  actualAmount: number;
 }
 
 export const scanCrossChainOpportunities = async (
@@ -40,18 +42,17 @@ export const scanCrossChainOpportunities = async (
       
       pairs.forEach((pair, index) => {
         // Generate multiple opportunities per pair with different spreads AND SIZES
-        for (let k = 0; k < 3; k++) {
+        for (let k = 0; k < 4; k++) {
           // Enhanced spread calculation with better market simulation
           const baseSpread = 0.6 + Math.random() * 2.8; // 0.6% to 3.4%
           const volatilityBonus = Math.random() * 0.4;
           const spread = baseSpread + volatilityBonus;
           
-          // NEW: Generate mix of small and large opportunities
-          // 60% small opportunities ($500-$5000), 40% larger ones ($15000-$100000)
-          const isSmallOpportunity = Math.random() < 0.6;
+          // IMPROVED: Generate more smaller opportunities (80% small, 20% larger)
+          const isSmallOpportunity = Math.random() < 0.8;
           const amount = isSmallOpportunity 
-            ? 500 + Math.random() * 4500    // $500 - $5,000 for small opportunities
-            : 15000 + Math.random() * 85000; // $15,000 - $100,000 for larger ones
+            ? 500 + Math.random() * 2500     // $500 - $3,000 for small opportunities
+            : 10000 + Math.random() * 40000; // $10,000 - $50,000 for larger ones
           
           // Use optimized systems for fee calculation
           const optimization = getOptimizedCrossChainArbitrage(
@@ -74,14 +75,16 @@ export const scanCrossChainOpportunities = async (
             executionTime: optimization.bridgeQuote.estimatedTime + 
                           optimization.gasOptimization.estimatedConfirmationTime,
             confidence: optimization.confidence,
-            riskLevel: (spread > 2.5 ? 'low' : spread > 1.5 ? 'medium' : 'high') as 'low' | 'medium' | 'high'
+            riskLevel: (spread > 2.5 ? 'low' : spread > 1.5 ? 'medium' : 'high') as 'low' | 'medium' | 'high',
+            // CRUCIAL: Store the actual amount being used
+            actualAmount: amount
           };
 
           // Regular cross-chain arbitrage (requires capital)
           const regularNetProfit = optimization.estimatedProfit;
           
           // Lower profit threshold for small opportunities
-          const minProfitThreshold = isSmallOpportunity ? 1.5 : 8;
+          const minProfitThreshold = isSmallOpportunity ? 1.0 : 8;
           
           if (regularNetProfit > minProfitThreshold) {
             opportunities.push({
@@ -100,7 +103,7 @@ export const scanCrossChainOpportunities = async (
             const flashNetProfit = optimization.estimatedProfit;
             
             // Much lower threshold for small optimized flash loans
-            const flashMinThreshold = isSmallOpportunity ? 0.8 : 3;
+            const flashMinThreshold = isSmallOpportunity ? 0.5 : 3;
             
             if (flashNetProfit > flashMinThreshold) {
               opportunities.push({
@@ -109,7 +112,7 @@ export const scanCrossChainOpportunities = async (
                 estimatedProfit: amount * spread / 100,
                 totalFees: optimization.totalFees,
                 netProfit: flashNetProfit,
-                requiresCapital: amount, // Store the actual amount needed for calculations
+                requiresCapital: amount,
                 flashLoanEnabled: true,
                 flashLoanProvider: optimization.flashLoanQuote.provider.name,
                 flashLoanFee: amount * optimization.flashLoanQuote.effectiveFee / 100
@@ -134,5 +137,5 @@ export const scanCrossChainOpportunities = async (
       if (!a.flashLoanEnabled && b.flashLoanEnabled) return 1;
       return b.netProfit - a.netProfit;
     })
-    .slice(0, 50); // Generate more opportunities for better filtering
+    .slice(0, 60); // Generate more opportunities for better filtering
 };
