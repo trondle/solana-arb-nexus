@@ -39,14 +39,19 @@ export const scanCrossChainOpportunities = async (
       const toChain = enabledChains[j];
       
       pairs.forEach((pair, index) => {
-        // Generate multiple opportunities per pair with different spreads
+        // Generate multiple opportunities per pair with different spreads AND SIZES
         for (let k = 0; k < 3; k++) {
           // Enhanced spread calculation with better market simulation
           const baseSpread = 0.6 + Math.random() * 2.8; // 0.6% to 3.4%
           const volatilityBonus = Math.random() * 0.4;
           const spread = baseSpread + volatilityBonus;
           
-          const amount = 15000 + Math.random() * 85000;
+          // NEW: Generate mix of small and large opportunities
+          // 60% small opportunities ($500-$5000), 40% larger ones ($15000-$100000)
+          const isSmallOpportunity = Math.random() < 0.6;
+          const amount = isSmallOpportunity 
+            ? 500 + Math.random() * 4500    // $500 - $5,000 for small opportunities
+            : 15000 + Math.random() * 85000; // $15,000 - $100,000 for larger ones
           
           // Use optimized systems for fee calculation
           const optimization = getOptimizedCrossChainArbitrage(
@@ -75,7 +80,10 @@ export const scanCrossChainOpportunities = async (
           // Regular cross-chain arbitrage (requires capital)
           const regularNetProfit = optimization.estimatedProfit;
           
-          if (regularNetProfit > 8) {
+          // Lower profit threshold for small opportunities
+          const minProfitThreshold = isSmallOpportunity ? 1.5 : 8;
+          
+          if (regularNetProfit > minProfitThreshold) {
             opportunities.push({
               id: `cross-regular-${fromChain.id}-${toChain.id}-${index}-${k}`,
               ...baseOpportunity,
@@ -91,8 +99,10 @@ export const scanCrossChainOpportunities = async (
           if (flashLoanMode && optimization.flashLoanQuote) {
             const flashNetProfit = optimization.estimatedProfit;
             
-            // Much lower threshold for optimized flash loans
-            if (flashNetProfit > 3) {
+            // Much lower threshold for small optimized flash loans
+            const flashMinThreshold = isSmallOpportunity ? 0.8 : 3;
+            
+            if (flashNetProfit > flashMinThreshold) {
               opportunities.push({
                 id: `cross-flash-${fromChain.id}-${toChain.id}-${index}-${k}`,
                 ...baseOpportunity,
