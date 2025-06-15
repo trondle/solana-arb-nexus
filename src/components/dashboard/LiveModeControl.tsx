@@ -8,7 +8,6 @@ import { Switch } from '@/components/ui/switch';
 import { 
   Wifi, 
   WifiOff, 
-  Settings, 
   Key, 
   AlertTriangle,
   CheckCircle,
@@ -17,6 +16,7 @@ import {
 import { ConfigurationService } from '@/services/configurationService';
 import { PriceAggregator } from '@/services/priceAggregator';
 import { WebSocketManager } from '@/services/webSocketManager';
+import ApiConfigurationDialog from './ApiConfigurationDialog';
 
 const LiveModeControl = () => {
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -142,10 +142,7 @@ const LiveModeControl = () => {
 
         {/* Configuration Actions */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Configure APIs
-          </Button>
+          <ApiConfigurationDialog onConfigurationChange={loadStatus} />
           <Button variant="outline" size="sm" onClick={loadStatus}>
             Refresh Status
           </Button>
