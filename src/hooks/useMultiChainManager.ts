@@ -277,6 +277,77 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
       { name: 'TerraSwap', fee: 0.30, liquidity: 90000000, slippage: 0.20 },
       { name: 'Loop Finance', fee: 0.40, liquidity: 70000000, slippage: 0.30 }
     ]
+  },
+  // PHASE 3: EMERGING CHAINS - Ultra-performance next-gen networks
+  {
+    id: 'sui',
+    name: 'Sui',
+    symbol: 'SUI',
+    rpcUrl: 'https://fullnode.mainnet.sui.io',
+    explorerUrl: 'https://explorer.sui.io',
+    gasCost: 0.0001, // Ultra-low gas
+    blockTime: 400, // Ultra-fast 400ms execution
+    enabled: true, // ENABLED for ultra-fast arbitrage
+    networkFee: 0.002,
+    flashLoanProviders: [
+      { name: 'Sui Finance', fee: 0.06, maxAmount: 8000000, minAmount: 500, available: true, reliability: 95 },
+      { name: 'DeepBook Flash', fee: 0.04, maxAmount: 6000000, minAmount: 1000, available: true, reliability: 93 },
+      { name: 'Cetus Flash', fee: 0.05, maxAmount: 5000000, minAmount: 500, available: true, reliability: 91 },
+      { name: 'Kriya Flash', fee: 0.07, maxAmount: 4000000, minAmount: 1000, available: true, reliability: 89 }
+    ],
+    dexes: [
+      { name: 'DeepBook', fee: 0.10, liquidity: 120000000, slippage: 0.03 }, // Ultra-low slippage
+      { name: 'Cetus', fee: 0.15, liquidity: 90000000, slippage: 0.04 },
+      { name: 'Turbos', fee: 0.20, liquidity: 70000000, slippage: 0.05 },
+      { name: 'Kriya', fee: 0.12, liquidity: 65000000, slippage: 0.04 }
+    ]
+  },
+  {
+    id: 'aptos',
+    name: 'Aptos',
+    symbol: 'APT',
+    rpcUrl: 'https://fullnode.mainnet.aptoslabs.com/v1',
+    explorerUrl: 'https://explorer.aptoslabs.com',
+    gasCost: 0.0002, // Very low gas fees
+    blockTime: 800, // Sub-second finality
+    enabled: true, // ENABLED for fast execution + PancakeSwap integration
+    networkFee: 0.003,
+    flashLoanProviders: [
+      { name: 'Aries Markets', fee: 0.08, maxAmount: 7000000, minAmount: 500, available: true, reliability: 94 },
+      { name: 'Aptos Finance', fee: 0.09, maxAmount: 5000000, minAmount: 1000, available: true, reliability: 92 },
+      { name: 'Thala Flash', fee: 0.06, maxAmount: 6000000, minAmount: 500, available: true, reliability: 90 },
+      { name: 'Abel Finance', fee: 0.07, maxAmount: 4500000, minAmount: 1000, available: true, reliability: 88 }
+    ],
+    dexes: [
+      { name: 'PancakeSwap Aptos', fee: 0.25, liquidity: 200000000, slippage: 0.05 }, // Major integration
+      { name: 'LiquidSwap', fee: 0.30, liquidity: 150000000, slippage: 0.06 },
+      { name: 'AUX Exchange', fee: 0.20, liquidity: 100000000, slippage: 0.07 },
+      { name: 'Thala Swap', fee: 0.15, liquidity: 80000000, slippage: 0.05 }
+    ]
+  },
+  {
+    id: 'fantom',
+    name: 'Fantom',
+    symbol: 'FTM',
+    rpcUrl: 'https://rpc.ftm.tools',
+    explorerUrl: 'https://ftmscan.com',
+    gasCost: 0.0001, // Near-zero fees
+    blockTime: 1200, // ~1 second finality
+    enabled: true, // ENABLED for near-zero fee arbitrage
+    networkFee: 0.001, // Extremely low network fees
+    flashLoanProviders: [
+      { name: 'Geist Finance', fee: 0.09, maxAmount: 12000000, minAmount: 100, available: true, reliability: 96 }, // Geist protocol
+      { name: 'Scream Flash', fee: 0.05, maxAmount: 8000000, minAmount: 500, available: true, reliability: 93 },
+      { name: 'Tarot Flash', fee: 0.07, maxAmount: 6000000, minAmount: 1000, available: true, reliability: 91 },
+      { name: 'Hundred Finance', fee: 0.08, maxAmount: 5000000, minAmount: 500, available: true, reliability: 89 }
+    ],
+    dexes: [
+      { name: 'SpookySwap', fee: 0.20, liquidity: 300000000, slippage: 0.04 }, // SpookySwap protocol
+      { name: 'SpiritSwap', fee: 0.25, liquidity: 250000000, slippage: 0.05 },
+      { name: 'Beethoven X', fee: 0.15, liquidity: 180000000, slippage: 0.06 }, // Balancer V2 on Fantom
+      { name: 'SushiSwap', fee: 0.30, liquidity: 150000000, slippage: 0.07 },
+      { name: 'Curve Finance', fee: 0.04, liquidity: 200000000, slippage: 0.02 } // Ultra-low fees for stables
+    ]
   }
 ];
 
