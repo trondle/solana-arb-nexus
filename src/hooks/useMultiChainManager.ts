@@ -4,8 +4,8 @@ import { SUPPORTED_CHAINS, ChainConfig } from '../config/chainConfigurations';
 import { scanCrossChainOpportunities, CrossChainOpportunity } from '../services/opportunityScanner';
 import { getBestFlashLoanProvider, getBestDexRoute } from '../utils/flashLoanOptimizer';
 
-export { ChainConfig, CrossChainOpportunity } from '../config/chainConfigurations';
-export { CrossChainOpportunity as CrossChainOpportunityType } from '../services/opportunityScanner';
+export type { ChainConfig } from '../config/chainConfigurations';
+export type { CrossChainOpportunity } from '../services/opportunityScanner';
 
 export function useMultiChainManager() {
   const [chains, setChains] = useState<ChainConfig[]>(SUPPORTED_CHAINS);
