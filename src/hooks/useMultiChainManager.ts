@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 
 export interface ChainConfig {
@@ -93,6 +92,7 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
       { name: '1inch', fee: 0.25, liquidity: 300000000, slippage: 0.06 }
     ]
   },
+  // ENABLE ARBITRUM - Part of profitable combinations
   {
     id: 'arbitrum',
     name: 'Arbitrum',
@@ -101,7 +101,7 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://arbiscan.io',
     gasCost: 0.0003,
     blockTime: 1000,
-    enabled: false,
+    enabled: true, // ENABLED for Avalanche ↔ Arbitrum combo
     networkFee: 0.02,
     flashLoanProviders: [
       { name: 'Aave', fee: 0.09, maxAmount: 5000000, minAmount: 500, available: true, reliability: 98 },
@@ -131,7 +131,7 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
       { name: 'SushiSwap', fee: 0.30, liquidity: 60000000, slippage: 0.10 }
     ]
   },
-  // NEW TIER 1 CHAINS
+  // TIER 1 CHAINS - Already implemented
   {
     id: 'base',
     name: 'Base',
@@ -140,7 +140,7 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://basescan.org',
     gasCost: 0.0001, // Ultra-low gas fees
     blockTime: 2000,
-    enabled: false,
+    enabled: true, // ENABLED for Base ↔ BSC combo
     networkFee: 0.008,
     flashLoanProviders: [
       { name: 'Aave V3', fee: 0.09, maxAmount: 8000000, minAmount: 500, available: true, reliability: 98 },
@@ -161,7 +161,7 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://bscscan.com',
     gasCost: 0.20, // $0.20 gas
     blockTime: 3000,
-    enabled: false,
+    enabled: true, // ENABLED for Base ↔ BSC combo
     networkFee: 0.01,
     flashLoanProviders: [
       { name: 'Venus', fee: 0.05, maxAmount: 15000000, minAmount: 100, available: true, reliability: 97 },
@@ -182,7 +182,7 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://snowscan.xyz',
     gasCost: 0.05, // $0.05 gas
     blockTime: 1500, // 1-2s finality
-    enabled: false,
+    enabled: true, // ENABLED for Avalanche ↔ Arbitrum combo
     networkFee: 0.012,
     flashLoanProviders: [
       { name: 'Aave', fee: 0.09, maxAmount: 12000000, minAmount: 500, available: true, reliability: 98 },
@@ -214,6 +214,68 @@ const SUPPORTED_CHAINS: ChainConfig[] = [
       { name: 'Velodrome V2', fee: 0.05, liquidity: 180000000, slippage: 0.05 }, // Growing TVL
       { name: 'Uniswap V3', fee: 0.30, liquidity: 250000000, slippage: 0.04 },
       { name: 'KyberSwap', fee: 0.20, liquidity: 90000000, slippage: 0.07 }
+    ]
+  },
+  // NEW PROFITABLE CHAINS
+  {
+    id: 'deso',
+    name: 'DeSo',
+    symbol: 'DESO',
+    rpcUrl: 'https://node.deso.org/api/v0',
+    explorerUrl: 'https://explorer.deso.org',
+    gasCost: 0.0001, // Very low fees
+    blockTime: 1000, // Fast blocks
+    enabled: true, // ENABLED for DeSo ↔ Ethereum combo (social token premiums)
+    networkFee: 0.005,
+    flashLoanProviders: [
+      { name: 'DeSo Flash', fee: 0.12, maxAmount: 2000000, minAmount: 500, available: true, reliability: 89 },
+      { name: 'Social Finance', fee: 0.15, maxAmount: 1500000, minAmount: 1000, available: true, reliability: 85 }
+    ],
+    dexes: [
+      { name: 'DeSo DEX', fee: 0.40, liquidity: 25000000, slippage: 0.15 }, // Higher fees due to social token premiums
+      { name: 'Creator Exchange', fee: 0.50, liquidity: 15000000, slippage: 0.20 }
+    ]
+  },
+  {
+    id: 'sui',
+    name: 'Sui',
+    symbol: 'SUI',
+    rpcUrl: 'https://fullnode.mainnet.sui.io',
+    explorerUrl: 'https://explorer.sui.io',
+    gasCost: 0.0002, // Ultra-fast execution
+    blockTime: 300, // Sub-second finality
+    enabled: true, // ENABLED for Sui ↔ Solana combo (ultra-fast execution)
+    networkFee: 0.003,
+    flashLoanProviders: [
+      { name: 'Sui Finance', fee: 0.08, maxAmount: 6000000, minAmount: 500, available: true, reliability: 94 },
+      { name: 'DeepBook Flash', fee: 0.06, maxAmount: 4000000, minAmount: 1000, available: true, reliability: 92 },
+      { name: 'Cetus Flash', fee: 0.07, maxAmount: 3500000, minAmount: 500, available: true, reliability: 90 }
+    ],
+    dexes: [
+      { name: 'DeepBook', fee: 0.15, liquidity: 80000000, slippage: 0.05 }, // Low slippage, fast execution
+      { name: 'Cetus', fee: 0.20, liquidity: 60000000, slippage: 0.06 },
+      { name: 'Turbos', fee: 0.25, liquidity: 45000000, slippage: 0.08 }
+    ]
+  },
+  {
+    id: 'terra-classic',
+    name: 'Terra Classic',
+    symbol: 'LUNC',
+    rpcUrl: 'https://terra-classic-fcd.publicnode.com',
+    explorerUrl: 'https://finder.terra.money/classic',
+    gasCost: 0.50, // Higher volatility = higher opportunity
+    blockTime: 6000,
+    enabled: true, // ENABLED for Terra Classic ↔ BSC combo (volatility arbitrage)
+    networkFee: 0.02,
+    flashLoanProviders: [
+      { name: 'Astroport Flash', fee: 0.20, maxAmount: 8000000, minAmount: 1000, available: true, reliability: 82 },
+      { name: 'Terra Station', fee: 0.25, maxAmount: 5000000, minAmount: 2000, available: true, reliability: 78 },
+      { name: 'Prism Flash', fee: 0.18, maxAmount: 6000000, minAmount: 1500, available: true, reliability: 80 }
+    ],
+    dexes: [
+      { name: 'Astroport', fee: 0.35, liquidity: 120000000, slippage: 0.25 }, // High volatility, high spreads
+      { name: 'TerraSwap', fee: 0.30, liquidity: 90000000, slippage: 0.20 },
+      { name: 'Loop Finance', fee: 0.40, liquidity: 70000000, slippage: 0.30 }
     ]
   }
 ];
