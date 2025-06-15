@@ -45,6 +45,60 @@ export type Database = {
         }
         Relationships: []
       }
+      crypto_transactions: {
+        Row: {
+          amount: number
+          block_number: number | null
+          chain_name: string
+          confirmed_at: string | null
+          created_at: string
+          from_address: string | null
+          gas_fee: number | null
+          id: string
+          status: string
+          to_address: string | null
+          token_symbol: string
+          transaction_hash: string | null
+          transaction_type: string
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          amount: number
+          block_number?: number | null
+          chain_name: string
+          confirmed_at?: string | null
+          created_at?: string
+          from_address?: string | null
+          gas_fee?: number | null
+          id?: string
+          status?: string
+          to_address?: string | null
+          token_symbol: string
+          transaction_hash?: string | null
+          transaction_type: string
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          block_number?: number | null
+          chain_name?: string
+          confirmed_at?: string | null
+          created_at?: string
+          from_address?: string | null
+          gas_fee?: number | null
+          id?: string
+          status?: string
+          to_address?: string | null
+          token_symbol?: string
+          transaction_hash?: string | null
+          transaction_type?: string
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -126,6 +180,69 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_balances: {
+        Row: {
+          balance: number
+          chain_name: string
+          id: string
+          last_updated: string
+          token_symbol: string
+          usd_value: number | null
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          balance?: number
+          chain_name: string
+          id?: string
+          last_updated?: string
+          token_symbol: string
+          usd_value?: number | null
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          balance?: number
+          chain_name?: string
+          id?: string
+          last_updated?: string
+          token_symbol?: string
+          usd_value?: number | null
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      wallet_connections: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+          wallet_address: string
+          wallet_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+          wallet_address: string
+          wallet_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string
+          wallet_type?: string
         }
         Relationships: []
       }
