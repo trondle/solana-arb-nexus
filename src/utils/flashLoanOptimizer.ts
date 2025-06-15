@@ -85,9 +85,14 @@ export const getOptimizedCrossChainArbitrage = (
   // GREATLY improved gas fee calculation for very small amounts
   const isVerySmallAmount = amount < 2500;
   const baseGasFee = isVerySmallAmount ? 0.5 : amount < 5000 ? 1.5 : 3; // Much lower base gas for very small amounts
-  const fromChainGas = GasOptimizer.estimateTransactionCost(fromChain.id, 300000, prioritizeSpeed ? 'high' : 'medium');
-  const toChainGas = GasOptimizer.estimateTransactionCost(toChain.id, 200000, prioritizeSpeed ? 'high' : 'medium');
-  const gasFees = Math.max(baseGasFee, (fromChainGas + toChainGas) * (isVerySmallAmount ? 0.3 : 0.7)); // Much lower gas multiplier
+  const fromChainGasCost = GasOptimizer.estimateTransactionCost(fromChain.id, 300000, prioritizeSpeed ? 'high' : 'medium');
+  const toChainGasCost = GasOptimizer.estimateTransactionCost(toChain.id, 200000, prioritizeSpeed ? 'high' : 'medium');
+  
+  // Extract cost values from the returned objects
+  const fromChainGasValue = typeof fromChainGasCost === 'object' ? fromChainGasCost.cost : fromChainGasCost;
+  const toChainGasValue = typeof toChainGasCost === 'object' ? toChainGasCost.cost : toChainGasCost;
+  
+  const gasFees = Math.max(baseGasFee, (fromChainGasValue + toChainGasValue) * (isVerySmallAmount ? 0.3 : 0.7)); // Much lower gas multiplier
 
   const totalFees = flashLoanFee + bridgeFee + tradingFees + gasFees;
   const grossProfit = amount * spread / 100;
