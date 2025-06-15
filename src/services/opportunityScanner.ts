@@ -1,6 +1,8 @@
-
 import { ChainConfig } from '../config/types';
-import { getBestFlashLoanProvider, getBestDexRoute } from '../utils/flashLoanOptimizer';
+import { getOptimizedCrossChainArbitrage, calculateOptimizedFees } from '../utils/flashLoanOptimizer';
+import { BridgeOptimizer } from '../utils/bridgeOptimizer';
+import { GasOptimizer } from '../utils/gasOptimizer';
+import { DexAggregator } from '../dexAggregator';
 
 export interface CrossChainOpportunity {
   id: string;
@@ -23,7 +25,8 @@ export interface CrossChainOpportunity {
 
 export const scanCrossChainOpportunities = async (
   enabledChains: ChainConfig[], 
-  flashLoanMode: boolean
+  flashLoanMode: boolean,
+  userVolume: number = 0
 ): Promise<CrossChainOpportunity[]> => {
   const opportunities: CrossChainOpportunity[] = [];
   const pairs = ['USDC/USDT', 'ETH/USDC', 'BTC/USDC', 'SOL/USDC', 'MATIC/USDC', 'ARB/USDC'];
@@ -34,44 +37,46 @@ export const scanCrossChainOpportunities = async (
       const toChain = enabledChains[j];
       
       pairs.forEach((pair, index) => {
-        // Enhanced spread calculation with market volatility
-        const baseSpread = 0.8 + Math.random() * 2.5;
-        const volatilityBonus = Math.random() * 0.5;
+        // Enhanced spread calculation with better market simulation
+        const baseSpread = 0.6 + Math.random() * 2.8; // 0.6% to 3.4%
+        const volatilityBonus = Math.random() * 0.4;
         const spread = baseSpread + volatilityBonus;
         
         const amount = 15000 + Math.random() * 85000;
         
-        // Optimized bridge selection
-        const bridgeFee = amount * (0.0008 + Math.random() * 0.0004);
-        const gasFeesTotal = (fromChain.gasCost + toChain.gasCost) * 0.7;
-        const networkFees = (fromChain.networkFee + toChain.networkFee) * 0.9;
-        
-        // Get optimal DEX routes
-        const fromDex = getBestDexRoute(fromChain, amount);
-        const toDex = getBestDexRoute(toChain, amount);
-        
+        // Use optimized systems for fee calculation
+        const optimization = getOptimizedCrossChainArbitrage(
+          fromChain,
+          toChain,
+          amount,
+          spread,
+          userVolume,
+          false // Not prioritizing speed for regular scan
+        );
+
+        if (!optimization) return;
+
         const baseOpportunity = {
           fromChain: fromChain.name,
           toChain: toChain.name,
           pair,
           spread,
-          bridgeFee,
-          executionTime: (fromChain.blockTime + toChain.blockTime + 3000) * 0.8,
-          confidence: 75 + Math.random() * 20,
+          bridgeFee: optimization.bridgeQuote.totalFee,
+          executionTime: optimization.bridgeQuote.estimatedTime + 
+                        optimization.gasOptimization.estimatedConfirmationTime,
+          confidence: optimization.confidence,
           riskLevel: (spread > 2.5 ? 'low' : spread > 1.5 ? 'medium' : 'high') as 'low' | 'medium' | 'high'
         };
 
         // Regular cross-chain arbitrage (requires capital)
-        const regularTotalFees = bridgeFee + gasFeesTotal + networkFees + (amount * fromDex.fee / 100) + (amount * toDex.fee / 100);
-        const regularEstimatedProfit = amount * spread / 100;
-        const regularNetProfit = regularEstimatedProfit - regularTotalFees;
+        const regularNetProfit = optimization.estimatedProfit;
         
         if (regularNetProfit > 8) {
           opportunities.push({
             id: `cross-regular-${fromChain.id}-${toChain.id}-${index}`,
             ...baseOpportunity,
-            estimatedProfit: regularEstimatedProfit,
-            totalFees: regularTotalFees,
+            estimatedProfit: amount * spread / 100,
+            totalFees: optimization.totalFees,
             netProfit: regularNetProfit,
             requiresCapital: amount,
             flashLoanEnabled: false
@@ -79,29 +84,21 @@ export const scanCrossChainOpportunities = async (
         }
 
         // Enhanced flash loan cross-chain arbitrage
-        const bestFromProvider = getBestFlashLoanProvider(fromChain, amount);
-        if (bestFromProvider && flashLoanMode) {
-          // Multi-provider optimization - 20% fee reduction
-          const optimizedFlashLoanFee = (amount * bestFromProvider.fee / 100) * 0.8;
-          // Dynamic routing optimization - 15% trading fee reduction
-          const optimizedTradingFees = (amount * fromDex.fee / 100 + amount * toDex.fee / 100) * 0.85;
+        if (flashLoanMode && optimization.flashLoanQuote) {
+          const flashNetProfit = optimization.estimatedProfit;
           
-          const flashTotalFees = bridgeFee + gasFeesTotal + networkFees + optimizedFlashLoanFee + optimizedTradingFees;
-          const flashEstimatedProfit = amount * spread / 100;
-          const flashNetProfit = flashEstimatedProfit - flashTotalFees;
-          
-          // Lower threshold for flash loans due to capital efficiency
-          if (flashNetProfit > 5) {
+          // Much lower threshold for optimized flash loans
+          if (flashNetProfit > 3) {
             opportunities.push({
               id: `cross-flash-${fromChain.id}-${toChain.id}-${index}`,
               ...baseOpportunity,
-              estimatedProfit: flashEstimatedProfit,
-              totalFees: flashTotalFees,
+              estimatedProfit: amount * spread / 100,
+              totalFees: optimization.totalFees,
               netProfit: flashNetProfit,
               requiresCapital: 0,
               flashLoanEnabled: true,
-              flashLoanProvider: bestFromProvider.name,
-              flashLoanFee: optimizedFlashLoanFee
+              flashLoanProvider: optimization.flashLoanQuote.provider.name,
+              flashLoanFee: amount * optimization.flashLoanQuote.effectiveFee / 100
             });
           }
         }
@@ -109,11 +106,18 @@ export const scanCrossChainOpportunities = async (
     }
   }
   
-  // Sort by net profit and apply volume-based bonuses
+  // Enhanced sorting with optimization metrics
   return opportunities
     .map(opp => ({
       ...opp,
-      netProfit: opp.netProfit * (1 + Math.random() * 0.1)
+      // Add optimization bonus
+      netProfit: opp.netProfit * (1 + (userVolume > 100000 ? 0.05 : 0))
     }))
-    .sort((a, b) => b.netProfit - a.netProfit);
+    .sort((a, b) => {
+      // Prioritize flash loan opportunities as they're more capital efficient
+      if (a.flashLoanEnabled && !b.flashLoanEnabled) return -1;
+      if (!a.flashLoanEnabled && b.flashLoanEnabled) return 1;
+      return b.netProfit - a.netProfit;
+    })
+    .slice(0, 20); // Limit to top 20 opportunities
 };
