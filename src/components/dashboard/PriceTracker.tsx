@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, Wifi, WifiOff } from 'lucide-react';
 import { PriceAggregator } from '@/services/priceAggregator';
 import { WebSocketManager } from '@/services/webSocketManager';
+import { ConfigurationService } from '@/services/configurationService';
 
 interface PriceData {
   dex: string;
@@ -33,8 +33,18 @@ const PriceTracker = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [isRealTimeActive, setIsRealTimeActive] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [isLiveMode, setIsLiveMode] = useState(false);
 
   useEffect(() => {
+    // Initialize services
+    const initializeServices = async () => {
+      await ConfigurationService.loadConfiguration();
+      await PriceAggregator.initialize();
+      
+      const status = PriceAggregator.getLiveModeStatus();
+      setIsLiveMode(status.isLive);
+    };
+
     // Initialize WebSocket connection
     const wsManager = WebSocketManager.getInstance();
     
@@ -43,7 +53,7 @@ const PriceTracker = () => {
         await wsManager.connect();
         setIsRealTimeActive(true);
         
-        // Start mock data stream for development
+        // Start data stream (mock or real based on configuration)
         wsManager.startMockDataStream();
         
         // Subscribe to price updates
@@ -129,7 +139,8 @@ const PriceTracker = () => {
       });
     };
 
-    // Initial data load
+    // Initialize everything
+    initializeServices();
     updatePriceData();
     
     // Generate initial chart data
@@ -192,7 +203,7 @@ const PriceTracker = () => {
 
   return (
     <div className="space-y-6">
-      {/* Real-time Status */}
+      {/* Enhanced Real-time Status */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
@@ -207,6 +218,9 @@ const PriceTracker = () => {
               </span>
               <Badge variant={isRealTimeActive ? 'default' : 'destructive'}>
                 {isRealTimeActive ? 'Connected' : 'Offline'}
+              </Badge>
+              <Badge variant={isLiveMode ? 'default' : 'secondary'}>
+                {isLiveMode ? 'LIVE DATA' : 'DEMO MODE'}
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">

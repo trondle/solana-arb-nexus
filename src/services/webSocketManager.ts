@@ -20,6 +20,7 @@ export class WebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private isConnecting = false;
+  private useRealConnection = false;
 
   private constructor() {}
 
@@ -28,6 +29,10 @@ export class WebSocketManager {
       this.instance = new WebSocketManager();
     }
     return this.instance;
+  }
+
+  setRealConnection(enabled: boolean) {
+    this.useRealConnection = enabled;
   }
 
   connect(url: string = 'wss://api.example.com/realtime'): Promise<void> {
@@ -40,26 +45,42 @@ export class WebSocketManager {
       this.isConnecting = true;
 
       try {
-        // Mock WebSocket for development - in production use real WebSocket
-        this.ws = {
-          readyState: 1, // OPEN
-          send: (data: string) => {
-            console.log('Mock WebSocket send:', data);
-          },
-          close: () => {
-            console.log('Mock WebSocket close');
-          },
-          addEventListener: (event: string, handler: any) => {
-            if (event === 'open') {
-              setTimeout(() => handler({}), 100);
-            }
-          },
-          removeEventListener: () => {},
-        } as any;
+        if (this.useRealConnection) {
+          // Real WebSocket connection
+          this.ws = new WebSocket(url);
+          this.setupEventListeners();
+          
+          this.ws.onopen = () => {
+            this.isConnecting = false;
+            resolve();
+          };
+          
+          this.ws.onerror = (error) => {
+            this.isConnecting = false;
+            reject(error);
+          };
+        } else {
+          // Mock WebSocket for development
+          this.ws = {
+            readyState: 1, // OPEN
+            send: (data: string) => {
+              console.log('Mock WebSocket send:', data);
+            },
+            close: () => {
+              console.log('Mock WebSocket close');
+            },
+            addEventListener: (event: string, handler: any) => {
+              if (event === 'open') {
+                setTimeout(() => handler({}), 100);
+              }
+            },
+            removeEventListener: () => {},
+          } as any;
 
-        this.setupEventListeners();
-        this.isConnecting = false;
-        resolve();
+          this.setupEventListeners();
+          this.isConnecting = false;
+          resolve();
+        }
       } catch (error) {
         this.isConnecting = false;
         reject(error);
@@ -91,7 +112,9 @@ export class WebSocketManager {
     this.ws.addEventListener('close', () => {
       console.log('WebSocket disconnected');
       this.stopHeartbeat();
-      this.attemptReconnect();
+      if (this.useRealConnection) {
+        this.attemptReconnect();
+      }
     });
 
     this.ws.addEventListener('error', (error) => {
@@ -196,8 +219,10 @@ export class WebSocketManager {
     this.reconnectAttempts = 0;
   }
 
-  // Mock real-time data simulation for development
+  // Enhanced mock data simulation for development
   startMockDataStream(): void {
+    if (this.useRealConnection) return; // Don't start mock if using real connection
+
     setInterval(() => {
       const mockData = {
         type: 'price_update',
