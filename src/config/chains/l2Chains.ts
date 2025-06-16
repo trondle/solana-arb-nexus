@@ -1,4 +1,3 @@
-
 import { ChainConfig } from '../types';
 
 export const L2_CHAINS: ChainConfig[] = [
@@ -10,7 +9,7 @@ export const L2_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://arbiscan.io',
     gasCost: 0.0003,
     blockTime: 1000,
-    enabled: true,
+    enabled: false, // Disabled by default
     networkFee: 0.02,
     flashLoanProviders: [
       { name: 'Aave', fee: 0.09, maxAmount: 5000000, minAmount: 500, available: true, reliability: 98 },
@@ -29,7 +28,7 @@ export const L2_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://basescan.org',
     gasCost: 0.0001,
     blockTime: 2000,
-    enabled: true,
+    enabled: true, // Enabled by default
     networkFee: 0.008,
     flashLoanProviders: [
       { name: 'Aave V3', fee: 0.09, maxAmount: 8000000, minAmount: 500, available: true, reliability: 98 },
@@ -71,7 +70,7 @@ export const L2_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://explorer.zksync.io',
     gasCost: 0.0008,
     blockTime: 1500,
-    enabled: true,
+    enabled: false,
     networkFee: 0.008,
     flashLoanProviders: [
       { name: 'SyncSwap Flash', fee: 0.10, maxAmount: 4000000, minAmount: 500, available: true, reliability: 93 },
@@ -92,7 +91,7 @@ export const L2_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://lineascan.build',
     gasCost: 0.0006,
     blockTime: 2000,
-    enabled: true,
+    enabled: false,
     networkFee: 0.006,
     flashLoanProviders: [
       { name: 'LineaBank', fee: 0.09, maxAmount: 5000000, minAmount: 500, available: true, reliability: 94 },
@@ -113,7 +112,7 @@ export const L2_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://scrollscan.com',
     gasCost: 0.0007,
     blockTime: 1800,
-    enabled: true,
+    enabled: false,
     networkFee: 0.007,
     flashLoanProviders: [
       { name: 'Scroll Finance', fee: 0.08, maxAmount: 6000000, minAmount: 500, available: true, reliability: 95 },
@@ -134,7 +133,7 @@ export const L2_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://explorer.mantle.xyz',
     gasCost: 0.0003,
     blockTime: 1200,
-    enabled: true,
+    enabled: false,
     networkFee: 0.004,
     flashLoanProviders: [
       { name: 'Lendle', fee: 0.05, maxAmount: 8000000, minAmount: 500, available: true, reliability: 96 },
@@ -155,7 +154,7 @@ export const L2_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://starkscan.co',
     gasCost: 0.0009,
     blockTime: 2500,
-    enabled: true,
+    enabled: false,
     networkFee: 0.009,
     flashLoanProviders: [
       { name: 'zkLend', fee: 0.08, maxAmount: 7000000, minAmount: 500, available: true, reliability: 94 },

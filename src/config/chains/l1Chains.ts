@@ -10,7 +10,7 @@ export const L1_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://etherscan.io',
     gasCost: 0.003,
     blockTime: 12000,
-    enabled: true,
+    enabled: false, // Disabled by default
     networkFee: 0.15,
     flashLoanProviders: [
       { name: 'Aave', fee: 0.09, maxAmount: 10000000, minAmount: 1000, available: true, reliability: 99 },
@@ -31,7 +31,7 @@ export const L1_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://bscscan.com',
     gasCost: 0.20,
     blockTime: 3000,
-    enabled: true,
+    enabled: false,
     networkFee: 0.01,
     flashLoanProviders: [
       { name: 'Venus', fee: 0.05, maxAmount: 15000000, minAmount: 100, available: true, reliability: 97 },
@@ -52,7 +52,7 @@ export const L1_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://snowscan.xyz',
     gasCost: 0.05,
     blockTime: 1500,
-    enabled: true,
+    enabled: false,
     networkFee: 0.012,
     flashLoanProviders: [
       { name: 'Aave', fee: 0.09, maxAmount: 12000000, minAmount: 500, available: true, reliability: 98 },
@@ -92,7 +92,7 @@ export const L1_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://ftmscan.com',
     gasCost: 0.0001,
     blockTime: 1200,
-    enabled: true,
+    enabled: true, // Enabled by default
     networkFee: 0.001,
     flashLoanProviders: [
       { name: 'Geist Finance', fee: 0.09, maxAmount: 12000000, minAmount: 100, available: true, reliability: 96 },

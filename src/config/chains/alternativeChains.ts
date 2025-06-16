@@ -10,7 +10,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://solscan.io',
     gasCost: 0.000005,
     blockTime: 400,
-    enabled: true,
+    enabled: true, // Enabled by default
     networkFee: 0.01,
     flashLoanProviders: [
       { name: 'Solend', fee: 0.09, maxAmount: 1000000, minAmount: 1000, available: true, reliability: 96 },
@@ -23,6 +23,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
       { name: 'Jupiter', fee: 0.20, liquidity: 60000000, slippage: 0.08 }
     ]
   },
+  // All other alternative chains disabled by default
   {
     id: 'deso',
     name: 'DeSo',
@@ -31,7 +32,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://explorer.deso.org',
     gasCost: 0.0001,
     blockTime: 1000,
-    enabled: true,
+    enabled: false,
     networkFee: 0.005,
     flashLoanProviders: [
       { name: 'DeSo Flash', fee: 0.12, maxAmount: 2000000, minAmount: 500, available: true, reliability: 89 },
@@ -50,7 +51,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://explorer.sui.io',
     gasCost: 0.0002,
     blockTime: 300,
-    enabled: true,
+    enabled: false,
     networkFee: 0.003,
     flashLoanProviders: [
       { name: 'Sui Finance', fee: 0.08, maxAmount: 6000000, minAmount: 500, available: true, reliability: 94 },
@@ -71,7 +72,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://finder.terra.money/classic',
     gasCost: 0.50,
     blockTime: 6000,
-    enabled: true,
+    enabled: false,
     networkFee: 0.02,
     flashLoanProviders: [
       { name: 'Astroport Flash', fee: 0.20, maxAmount: 8000000, minAmount: 1000, available: true, reliability: 82 },
@@ -92,7 +93,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     explorerUrl: 'https://explorer.aptoslabs.com',
     gasCost: 0.0002,
     blockTime: 800,
-    enabled: true,
+    enabled: false,
     networkFee: 0.003,
     flashLoanProviders: [
       { name: 'Aries Markets', fee: 0.08, maxAmount: 7000000, minAmount: 500, available: true, reliability: 94 },
