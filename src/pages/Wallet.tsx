@@ -1,6 +1,6 @@
 
-import { WalletManager } from "@/components/wallet/WalletManager";
-import { TransactionHistory } from "@/components/wallet/TransactionHistory";
+import WalletManager from "@/components/wallet/WalletManager";
+import TransactionHistory from "@/components/wallet/TransactionHistory";
 import TargetChainWalletManager from "@/components/wallet/TargetChainWalletManager";
 
 const Wallet = () => {
