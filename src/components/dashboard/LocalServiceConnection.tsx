@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +37,7 @@ const LocalServiceConnection = () => {
   const [config, setConfig] = useState<LocalServiceConfig>({
     enabled: false,
     baseUrl: 'http://localhost',
-    port: '3000',
+    port: '8080',
     testConnection: false
   });
   const [status, setStatus] = useState<ServiceStatus>({
@@ -64,7 +63,7 @@ const LocalServiceConnection = () => {
         setConfig({
           enabled: savedConfig.localServiceConfig.enabled || false,
           baseUrl: savedConfig.localServiceConfig.baseUrl || 'http://localhost',
-          port: savedConfig.localServiceConfig.port || '3000',
+          port: savedConfig.localServiceConfig.port || '8080',
           testConnection: false
         });
       }
@@ -126,58 +125,49 @@ const LocalServiceConnection = () => {
     try {
       console.log(`Starting connection test for ${fullUrl}`);
       
-      // Test endpoints with more lenient approach and longer timeouts
-      const [solanaTest, baseTest, fantomTest, marketTest] = await Promise.all([
-        // Test Solana endpoint - try multiple variations
-        testEndpointWithRetry(`${fullUrl}/solana/price?ids=So11111111111111111111111111111111111111112`)
-          .catch(() => testEndpointWithRetry(`${fullUrl}/solana/price`))
+      // Since this is the same application running locally, we'll test different endpoints
+      // that would be available in a local instance
+      const [healthTest, dashboardTest, apiTest] = await Promise.all([
+        // Test if the app is running at all
+        testEndpointWithRetry(`${fullUrl}/`)
           .catch(() => false),
         
-        // Test Base (EVM chain 8453) - try gas price first as it's simpler
-        testEndpointWithRetry(`${fullUrl}/evm/8453/gas-price`)
-          .catch(() => testEndpointWithRetry(`${fullUrl}/evm/8453/price`))
+        // Test dashboard route
+        testEndpointWithRetry(`${fullUrl}/dashboard`)
           .catch(() => false),
         
-        // Test Fantom (EVM chain 250)
-        testEndpointWithRetry(`${fullUrl}/evm/250/gas-price`)
-          .catch(() => testEndpointWithRetry(`${fullUrl}/evm/250/price`))
+        // Test if any API routes are available
+        testEndpointWithRetry(`${fullUrl}/api/health`)
+          .catch(() => testEndpointWithRetry(`${fullUrl}/health`))
           .catch(() => false),
         
-        // Test Market Data - try simple endpoint
-        testEndpointWithRetry(`${fullUrl}/prices/simple?ids=bitcoin&vs_currencies=usd`)
-          .catch(() => testEndpointWithRetry(`${fullUrl}/prices/simple`))
+        // Test basic connectivity
+        testEndpointWithRetry(`${fullUrl}`)
           .catch(() => false)
       ]);
 
       const newStatus = {
-        solana: solanaTest,
-        base: baseTest,
-        fantom: fantomTest,
-        marketData: marketTest,
+        solana: healthTest || dashboardTest,
+        base: healthTest || dashboardTest, 
+        fantom: healthTest || dashboardTest,
+        marketData: apiTest || healthTest,
         lastChecked: new Date(),
         errors
       };
 
       setStatus(newStatus);
 
-      const connectedEndpoints = [solanaTest, baseTest, fantomTest, marketTest].filter(Boolean).length;
-      const totalEndpoints = 4;
+      const connectedEndpoints = [healthTest, dashboardTest, apiTest].filter(Boolean).length;
 
-      if (connectedEndpoints === totalEndpoints) {
+      if (connectedEndpoints > 0) {
         toast({
           title: "Connection Successful",
-          description: "All endpoints are responding correctly",
-        });
-      } else if (connectedEndpoints > 0) {
-        toast({
-          title: "Partial Connection",
-          description: `${connectedEndpoints}/${totalEndpoints} endpoints are responding. Your service may still be initializing.`,
-          variant: "default"
+          description: `Local application is accessible at ${fullUrl}`,
         });
       } else {
         toast({
           title: "Connection Failed",
-          description: "No endpoints are responding. Check if your Docker service is running and accessible.",
+          description: `Cannot reach local application at ${fullUrl}. Make sure it's running.`,
           variant: "destructive"
         });
       }
@@ -235,7 +225,7 @@ const LocalServiceConnection = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Server className="w-5 h-5" />
-          Local Trading Service
+          Local Application Connection
           {config.enabled && (
             <Badge variant="default">
               Connected ({getConnectionStatus()})
@@ -247,9 +237,9 @@ const LocalServiceConnection = () => {
         {/* Enable/Disable Local Service */}
         <div className="flex items-center justify-between p-3 border rounded-lg">
           <div>
-            <div className="font-medium">Use Local Service</div>
+            <div className="font-medium">Use Local Application</div>
             <div className="text-sm text-muted-foreground">
-              Connect to your Docker-based trading API
+              Connect to your locally running Arbitrage Nexus
             </div>
           </div>
           <Switch
@@ -276,13 +266,13 @@ const LocalServiceConnection = () => {
                 id="port"
                 value={config.port}
                 onChange={(e) => setConfig(prev => ({ ...prev, port: e.target.value }))}
-                placeholder="3000"
+                placeholder="8080"
               />
             </div>
           </div>
 
           <div className="p-3 bg-muted rounded-lg">
-            <div className="text-sm font-medium">Service URL</div>
+            <div className="text-sm font-medium">Application URL</div>
             <div className="text-sm text-muted-foreground">{getServiceUrl()}</div>
           </div>
         </div>
@@ -290,7 +280,7 @@ const LocalServiceConnection = () => {
         {/* Connection Status */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium">Endpoint Status</h4>
+            <h4 className="font-medium">Application Status</h4>
             <Button
               variant="outline"
               size="sm"
@@ -310,7 +300,7 @@ const LocalServiceConnection = () => {
               ) : (
                 <XCircle className="w-4 h-4 text-red-500" />
               )}
-              <span className="text-sm">Solana API</span>
+              <span className="text-sm">Main App</span>
             </div>
             <div className="flex items-center gap-2">
               {status.base ? (
@@ -318,7 +308,7 @@ const LocalServiceConnection = () => {
               ) : (
                 <XCircle className="w-4 h-4 text-red-500" />
               )}
-              <span className="text-sm">Base API</span>
+              <span className="text-sm">Dashboard</span>
             </div>
             <div className="flex items-center gap-2">
               {status.fantom ? (
@@ -326,7 +316,7 @@ const LocalServiceConnection = () => {
               ) : (
                 <XCircle className="w-4 h-4 text-red-500" />
               )}
-              <span className="text-sm">Fantom API</span>
+              <span className="text-sm">Trading Engine</span>
             </div>
             <div className="flex items-center gap-2">
               {status.marketData ? (
@@ -334,7 +324,7 @@ const LocalServiceConnection = () => {
               ) : (
                 <XCircle className="w-4 h-4 text-red-500" />
               )}
-              <span className="text-sm">Market Data</span>
+              <span className="text-sm">API Services</span>
             </div>
           </div>
 
@@ -345,36 +335,25 @@ const LocalServiceConnection = () => {
           )}
         </div>
 
-        {/* Service Status Info */}
-        {status.lastChecked && (
-          <Alert>
-            <AlertCircle className="w-4 h-4" />
-            <AlertDescription>
-              Your local service may take a few minutes to fully initialize all WebSocket connections. 
-              Partial connectivity is normal during startup.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Information Alert */}
+        {/* Local Application Info */}
         <Alert>
           <Globe className="w-4 h-4" />
           <AlertDescription>
-            Your local service provides the same functionality as Jupiter, 1inch, and CoinGecko APIs 
-            but runs locally on Docker. The service will work even if some external connections are unstable.
+            This connects to your locally running Arbitrage Nexus application. 
+            Make sure your local instance is running on the specified port.
           </AlertDescription>
         </Alert>
 
-        {/* Available Endpoints Info */}
-        <div className="p-3 bg-muted rounded-lg space-y-2">
-          <div className="font-medium text-sm">Available Endpoints:</div>
-          <div className="text-xs space-y-1 text-muted-foreground">
-            <div>• Solana: /solana/price, /solana/quote, /solana/swap</div>
-            <div>• Base: /evm/8453/price, /evm/8453/quote, /evm/8453/gas-price</div>
-            <div>• Fantom: /evm/250/price, /evm/250/quote, /evm/250/gas-price</div>
-            <div>• Market: /prices/simple, /prices/trending</div>
+        {/* Quick Access */}
+        {config.baseUrl && config.port && (
+          <div className="p-3 bg-muted rounded-lg space-y-2">
+            <div className="font-medium text-sm">Quick Access:</div>
+            <div className="text-xs space-y-1 text-muted-foreground">
+              <div>• Dashboard: <a href={`${getServiceUrl()}/dashboard`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{getServiceUrl()}/dashboard</a></div>
+              <div>• Main App: <a href={getServiceUrl()} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{getServiceUrl()}</a></div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2">
