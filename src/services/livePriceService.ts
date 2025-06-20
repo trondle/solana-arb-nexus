@@ -1,8 +1,15 @@
+import { LocalServiceAdapter } from './localServiceAdapter';
 
 interface LivePriceConfig {
   jupiterApiKey?: string;
   oneInchApiKey?: string;
   coinGeckoApiKey?: string;
+  localServiceConfig?: {
+    enabled: boolean;
+    baseUrl: string;
+    port: string;
+  };
+  enableLocalService?: boolean;
 }
 
 interface LiveTokenPrice {
@@ -21,6 +28,12 @@ export class LivePriceService {
 
   static setConfig(config: LivePriceConfig) {
     this.config = config;
+    
+    // Configure LocalServiceAdapter if enabled
+    if (config.localServiceConfig && config.enableLocalService) {
+      LocalServiceAdapter.setConfig(config.localServiceConfig);
+    }
+    
     console.log('LivePriceService: Configuration updated', Object.keys(config));
   }
 
@@ -146,7 +159,7 @@ export class LivePriceService {
     }
   }
 
-  // Main aggregated price function optimized for Base + Fantom + Solana
+  // Main aggregated price function with local service priority
   static async getAggregatedPrice(symbol: string, chainId?: number): Promise<LiveTokenPrice | null> {
     const cacheKey = `${symbol}-${chainId || 'all'}`;
     const cached = this.cache.get(cacheKey);
@@ -155,6 +168,21 @@ export class LivePriceService {
       return cached;
     }
 
+    // Check if local service is enabled and try it first
+    if (LocalServiceAdapter.isEnabled()) {
+      try {
+        const localResult = await this.getLocalServicePrice(symbol, chainId);
+        if (localResult) {
+          this.cache.set(cacheKey, localResult);
+          console.log(`Price updated for ${symbol}: $${localResult.price} from local service`);
+          return localResult;
+        }
+      } catch (error) {
+        console.warn('Local service failed, falling back to external APIs:', error);
+      }
+    }
+
+    // Fall back to external APIs if local service is not available
     const promises: Promise<LiveTokenPrice | null>[] = [];
 
     // Enhanced token mappings for our focused chains
@@ -234,6 +262,59 @@ export class LivePriceService {
     }
   }
 
+  // New method to get price from local service
+  private static async getLocalServicePrice(symbol: string, chainId?: number): Promise<LiveTokenPrice | null> {
+    try {
+      if (symbol === 'SOL') {
+        const solMint = 'So11111111111111111111111111111111111111112';
+        const prices = await LocalServiceAdapter.getSolanaPrice([solMint]);
+        return prices[0] || null;
+      }
+
+      if (chainId && (chainId === 8453 || chainId === 250)) {
+        // Base or Fantom
+        const tokenAddresses: Record<number, Record<string, string>> = {
+          8453: { // Base
+            'ETH': '0x0000000000000000000000000000000000000000',
+            'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+            'USDT': '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
+          },
+          250: { // Fantom
+            'FTM': '0x0000000000000000000000000000000000000000',
+            'USDC': '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75',
+            'USDT': '0x049d68029688eAbF473097a2fC38ef61633A3C7A'
+          }
+        };
+
+        const tokenAddress = tokenAddresses[chainId]?.[symbol];
+        if (tokenAddress) {
+          const prices = await LocalServiceAdapter.getEVMPrice(chainId, [tokenAddress]);
+          return prices[0] || null;
+        }
+      }
+
+      // Try market data endpoint as fallback
+      const coinIds = {
+        'SOL': 'solana',
+        'ETH': 'ethereum', 
+        'FTM': 'fantom',
+        'USDC': 'usd-coin',
+        'USDT': 'tether'
+      };
+
+      const coinId = coinIds[symbol as keyof typeof coinIds];
+      if (coinId) {
+        const prices = await LocalServiceAdapter.getSimplePrice([coinId]);
+        return prices[0] || null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching price from local service:', error);
+      return null;
+    }
+  }
+
   // WebSocket connections for real-time data
   static connectToJupiterWebSocket(callback: (data: any) => void): WebSocket | null {
     try {
@@ -290,8 +371,13 @@ export class LivePriceService {
     console.log('All WebSocket connections closed');
   }
 
-  // Health check for API services
-  static async healthCheck(): Promise<{ jupiter: boolean; oneInch: boolean; coinGecko: boolean }> {
+  // Enhanced health check including local service
+  static async healthCheck(): Promise<{ 
+    jupiter: boolean; 
+    oneInch: boolean; 
+    coinGecko: boolean; 
+    localService?: { solana: boolean; base: boolean; fantom: boolean; marketData: boolean }
+  }> {
     const health = {
       jupiter: false,
       oneInch: false,
@@ -320,6 +406,16 @@ export class LivePriceService {
       health.coinGecko = coinGeckoResult !== null;
     } catch (e) {
       console.error('CoinGecko health check failed:', e);
+    }
+
+    // Test local service if enabled
+    if (LocalServiceAdapter.isEnabled()) {
+      try {
+        const localHealth = await LocalServiceAdapter.healthCheck();
+        (health as any).localService = localHealth;
+      } catch (e) {
+        console.error('Local service health check failed:', e);
+      }
     }
 
     console.log('API Health Check:', health);

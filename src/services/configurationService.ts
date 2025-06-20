@@ -7,6 +7,12 @@ interface ApiConfiguration {
   coinGeckoApiKey?: string;
   enableRealTimeMode: boolean;
   enableLiveTrading: boolean;
+  localServiceConfig?: {
+    enabled: boolean;
+    baseUrl: string;
+    port: string;
+  };
+  enableLocalService?: boolean;
 }
 
 export class ConfigurationService {
@@ -55,5 +61,13 @@ export class ConfigurationService {
 
   static hasApiKeys(): boolean {
     return !!(this.config.jupiterApiKey || this.config.oneInchApiKey || this.config.coinGeckoApiKey);
+  }
+
+  static isLocalServiceEnabled(): boolean {
+    return !!(this.config.enableLocalService && this.config.localServiceConfig?.enabled);
+  }
+
+  static hasDataSource(): boolean {
+    return this.hasApiKeys() || this.isLocalServiceEnabled();
   }
 }
