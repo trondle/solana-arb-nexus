@@ -12,7 +12,8 @@ import {
   CheckCircle, 
   XCircle,
   Activity,
-  Globe
+  Globe,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ConfigurationService } from '@/services/configurationService';
@@ -30,6 +31,7 @@ interface ServiceStatus {
   fantom: boolean;
   marketData: boolean;
   lastChecked: Date | null;
+  errors: string[];
 }
 
 const LocalServiceConnection = () => {
@@ -44,7 +46,8 @@ const LocalServiceConnection = () => {
     base: false,
     fantom: false,
     marketData: false,
-    lastChecked: null
+    lastChecked: null,
+    errors: []
   });
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -70,59 +73,126 @@ const LocalServiceConnection = () => {
     }
   };
 
+  const testEndpointWithRetry = async (url: string, retries: number = 3, timeout: number = 10000): Promise<boolean> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        console.log(`Testing endpoint: ${url} (attempt ${i + 1}/${retries})`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log(`✓ Endpoint ${url} responded successfully`);
+          return true;
+        } else {
+          console.log(`⚠ Endpoint ${url} returned status ${response.status}`);
+          // For local services, even 4xx/5xx responses indicate the service is running
+          if (response.status < 500) {
+            return true; // Service is responding, just might need different parameters
+          }
+        }
+      } catch (error) {
+        console.log(`✗ Endpoint ${url} failed (attempt ${i + 1}): ${error}`);
+        
+        // If it's the last retry, return false
+        if (i === retries - 1) {
+          return false;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const delay = Math.min(1000 * Math.pow(2, i), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    return false;
+  };
+
   const testConnection = async () => {
     setTesting(true);
     const fullUrl = `${config.baseUrl}:${config.port}`;
+    const errors: string[] = [];
     
     try {
-      // Test Solana endpoint
-      const solanaTest = await fetch(`${fullUrl}/solana/price?ids=So11111111111111111111111111111111111111112`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.ok).catch(() => false);
-
-      // Test Base (EVM chain 8453)
-      const baseTest = await fetch(`${fullUrl}/evm/8453/gas-price`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.ok).catch(() => false);
-
-      // Test Fantom (EVM chain 250)
-      const fantomTest = await fetch(`${fullUrl}/evm/250/gas-price`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.ok).catch(() => false);
-
-      // Test Market Data
-      const marketTest = await fetch(`${fullUrl}/prices/simple?ids=solana&vs_currencies=usd`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.ok).catch(() => false);
+      console.log(`Starting connection test for ${fullUrl}`);
+      
+      // Test endpoints with more lenient approach and longer timeouts
+      const [solanaTest, baseTest, fantomTest, marketTest] = await Promise.all([
+        // Test Solana endpoint - try multiple variations
+        testEndpointWithRetry(`${fullUrl}/solana/price?ids=So11111111111111111111111111111111111111112`)
+          .catch(() => testEndpointWithRetry(`${fullUrl}/solana/price`))
+          .catch(() => false),
+        
+        // Test Base (EVM chain 8453) - try gas price first as it's simpler
+        testEndpointWithRetry(`${fullUrl}/evm/8453/gas-price`)
+          .catch(() => testEndpointWithRetry(`${fullUrl}/evm/8453/price`))
+          .catch(() => false),
+        
+        // Test Fantom (EVM chain 250)
+        testEndpointWithRetry(`${fullUrl}/evm/250/gas-price`)
+          .catch(() => testEndpointWithRetry(`${fullUrl}/evm/250/price`))
+          .catch(() => false),
+        
+        // Test Market Data - try simple endpoint
+        testEndpointWithRetry(`${fullUrl}/prices/simple?ids=bitcoin&vs_currencies=usd`)
+          .catch(() => testEndpointWithRetry(`${fullUrl}/prices/simple`))
+          .catch(() => false)
+      ]);
 
       const newStatus = {
         solana: solanaTest,
         base: baseTest,
         fantom: fantomTest,
         marketData: marketTest,
-        lastChecked: new Date()
+        lastChecked: new Date(),
+        errors
       };
 
       setStatus(newStatus);
 
-      const allConnected = solanaTest && baseTest && fantomTest && marketTest;
-      toast({
-        title: allConnected ? "Connection Successful" : "Partial Connection",
-        description: allConnected 
-          ? "All endpoints are responding correctly" 
-          : "Some endpoints are not responding. Check your local service.",
-        variant: allConnected ? "default" : "destructive"
-      });
+      const connectedEndpoints = [solanaTest, baseTest, fantomTest, marketTest].filter(Boolean).length;
+      const totalEndpoints = 4;
+
+      if (connectedEndpoints === totalEndpoints) {
+        toast({
+          title: "Connection Successful",
+          description: "All endpoints are responding correctly",
+        });
+      } else if (connectedEndpoints > 0) {
+        toast({
+          title: "Partial Connection",
+          description: `${connectedEndpoints}/${totalEndpoints} endpoints are responding. Your service may still be initializing.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: "No endpoints are responding. Check if your Docker service is running and accessible.",
+          variant: "destructive"
+        });
+      }
 
     } catch (error) {
       console.error('Connection test failed:', error);
+      setStatus(prev => ({
+        ...prev,
+        errors: [...prev.errors, `Connection test failed: ${error}`],
+        lastChecked: new Date()
+      }));
+      
       toast({
-        title: "Connection Failed",
-        description: "Unable to connect to local service. Make sure Docker is running.",
+        title: "Connection Test Error",
+        description: "Unable to test connection. Check console for details.",
         variant: "destructive"
       });
     } finally {
@@ -155,6 +225,10 @@ const LocalServiceConnection = () => {
   };
 
   const getServiceUrl = () => `${config.baseUrl}:${config.port}`;
+  const getConnectionStatus = () => {
+    const connected = [status.solana, status.base, status.fantom, status.marketData].filter(Boolean).length;
+    return `${connected}/4 endpoints`;
+  };
 
   return (
     <Card>
@@ -164,7 +238,7 @@ const LocalServiceConnection = () => {
           Local Trading Service
           {config.enabled && (
             <Badge variant="default">
-              Connected
+              Connected ({getConnectionStatus()})
             </Badge>
           )}
         </CardTitle>
@@ -271,12 +345,23 @@ const LocalServiceConnection = () => {
           )}
         </div>
 
+        {/* Service Status Info */}
+        {status.lastChecked && (
+          <Alert>
+            <AlertCircle className="w-4 h-4" />
+            <AlertDescription>
+              Your local service may take a few minutes to fully initialize all WebSocket connections. 
+              Partial connectivity is normal during startup.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Information Alert */}
         <Alert>
           <Globe className="w-4 h-4" />
           <AlertDescription>
             Your local service provides the same functionality as Jupiter, 1inch, and CoinGecko APIs 
-            but runs locally on Docker. Make sure your Docker container is running on the configured port.
+            but runs locally on Docker. The service will work even if some external connections are unstable.
           </AlertDescription>
         </Alert>
 
