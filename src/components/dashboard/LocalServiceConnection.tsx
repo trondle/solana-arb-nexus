@@ -58,7 +58,12 @@ const LocalServiceConnection = () => {
     try {
       const savedConfig = await ConfigurationService.loadConfiguration();
       if (savedConfig.localServiceConfig) {
-        setConfig(savedConfig.localServiceConfig);
+        setConfig({
+          enabled: savedConfig.localServiceConfig.enabled || false,
+          baseUrl: savedConfig.localServiceConfig.baseUrl || 'http://localhost',
+          port: savedConfig.localServiceConfig.port || '3000',
+          testConnection: false
+        });
       }
     } catch (error) {
       console.error('Failed to load local service configuration:', error);
