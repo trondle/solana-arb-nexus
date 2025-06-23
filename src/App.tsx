@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Security from "./pages/Security";
 import Wallet from "./pages/Wallet";
+import PersonalApiManager from "./pages/PersonalApiManager";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,9 +19,9 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <AuthProvider>
+        <Toaster />
+        <Sonner />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -28,7 +29,7 @@ const App = () => (
             <Route 
               path="/dashboard" 
               element={
-                <ProtectedRoute requiredRole="viewer">
+                <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
               } 
@@ -36,7 +37,7 @@ const App = () => (
             <Route 
               path="/security" 
               element={
-                <ProtectedRoute requiredRole="trader">
+                <ProtectedRoute>
                   <Security />
                 </ProtectedRoute>
               } 
@@ -44,8 +45,16 @@ const App = () => (
             <Route 
               path="/wallet" 
               element={
-                <ProtectedRoute requiredRole="viewer">
+                <ProtectedRoute>
                   <Wallet />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/personal-api" 
+              element={
+                <ProtectedRoute>
+                  <PersonalApiManager />
                 </ProtectedRoute>
               } 
             />
