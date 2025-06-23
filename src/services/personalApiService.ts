@@ -442,7 +442,7 @@ export class PersonalApiService {
       oneInch: false,
       coinGecko: false,
       overall: false,
-      riskLevel: 'HIGH' as const
+      riskLevel: 'HIGH' as 'LOW' | 'MEDIUM' | 'HIGH'
     };
 
     try {
