@@ -26,9 +26,25 @@ interface ArbitrageOpportunity {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
+interface FlashLoanArbitrageOpportunity {
+  id: string;
+  pair: string;
+  buyDex: string;
+  sellDex: string;
+  spread: number;
+  estimatedProfit: number;
+  requiredCapital: number;
+  flashLoanFee: number;
+  totalFees: number;
+  netProfit: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  confidence: number;
+}
+
 export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ETH']) => {
   const [prices, setPrices] = useState<Record<string, LivePrice>>({});
   const [arbitrageOpportunities, setArbitrageOpportunities] = useState<ArbitrageOpportunity[]>([]);
+  const [flashLoanOpportunities, setFlashLoanOpportunities] = useState<FlashLoanArbitrageOpportunity[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [error, setError] = useState<string>('');
@@ -96,10 +112,15 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
         
         setPrices(newPrices);
         setArbitrageOpportunities(response.data.arbitrageOpportunities || []);
+        
+        // Generate flash loan opportunities for ZeroCapitalArbitrage
+        const flashOpportunities = generateFlashLoanOpportunities(response.data.arbitrageOpportunities || []);
+        setFlashLoanOpportunities(flashOpportunities);
+        
         setLastUpdate(new Date(response.data.timestamp));
         setIsConnected(true);
         
-        console.log(`✅ Free API: Updated ${Object.keys(newPrices).length} prices, ${response.data.arbitrageOpportunities?.length || 0} opportunities`);
+        console.log(`✅ Free API: Updated ${Object.keys(newPrices).length} prices, ${flashOpportunities.length} flash loan opportunities`);
       } else {
         throw new Error('API request failed');
       }
@@ -110,6 +131,54 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
       setIsConnected(false);
     }
   }, [tokens, apiKey]);
+
+  const generateFlashLoanOpportunities = (opportunities: ArbitrageOpportunity[]): FlashLoanArbitrageOpportunity[] => {
+    const dexMappings = {
+      'solana': ['Raydium', 'Orca', 'Jupiter', 'Serum'],
+      'base': ['Uniswap V3', 'SushiSwap', 'Curve', 'Balancer'],
+      'fantom': ['SpookySwap', 'SpiritSwap', 'Curve', 'Beethoven X']
+    };
+
+    return opportunities
+      .filter(opp => opp.profitPercent > 0.5) // Only profitable opportunities
+      .slice(0, 8) // Limit to 8 opportunities
+      .map((opp, index) => {
+        const buyChainName = typeof opp.buyChain === 'string' ? opp.buyChain : 
+                           opp.buyChain === 8453 ? 'base' : 
+                           opp.buyChain === 250 ? 'fantom' : 'solana';
+        const sellChainName = typeof opp.sellChain === 'string' ? opp.sellChain : 
+                            opp.sellChain === 8453 ? 'base' : 
+                            opp.sellChain === 250 ? 'fantom' : 'solana';
+
+        const buyDexes = dexMappings[buyChainName as keyof typeof dexMappings] || dexMappings.solana;
+        const sellDexes = dexMappings[sellChainName as keyof typeof dexMappings] || dexMappings.solana;
+        
+        const buyDex = buyDexes[Math.floor(Math.random() * buyDexes.length)];
+        const sellDex = sellDexes[Math.floor(Math.random() * sellDexes.length)];
+
+        const requiredCapital = 2000 + Math.random() * 23000; // $2k-$25k range
+        const flashLoanFee = requiredCapital * 0.05 / 100; // 0.05% flash loan fee
+        const tradingFees = requiredCapital * 0.006; // 0.6% trading fees
+        const totalFees = flashLoanFee + tradingFees;
+        const estimatedProfit = requiredCapital * opp.profitPercent / 100;
+        const netProfit = estimatedProfit - totalFees;
+
+        return {
+          id: `flash-${index}-${Date.now()}`,
+          pair: `${opp.token}/USDC`,
+          buyDex,
+          sellDex,
+          spread: opp.profitPercent,
+          estimatedProfit,
+          requiredCapital,
+          flashLoanFee,
+          totalFees,
+          netProfit,
+          riskLevel: opp.riskLevel.toLowerCase() as 'low' | 'medium' | 'high',
+          confidence: opp.confidence
+        };
+      });
+  };
 
   useEffect(() => {
     if (!apiKey) return;
@@ -134,9 +203,17 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
       .slice(0, 5);
   }, [arbitrageOpportunities]);
 
+  const getBestFlashLoanOpportunities = useCallback(() => {
+    return flashLoanOpportunities
+      .filter(opp => opp.netProfit > 0)
+      .sort((a, b) => b.netProfit - a.netProfit)
+      .slice(0, 6);
+  }, [flashLoanOpportunities]);
+
   return {
     prices,
     arbitrageOpportunities,
+    flashLoanOpportunities: getBestFlashLoanOpportunities(),
     bestOpportunities: getBestArbitrageOpportunities(),
     isConnected,
     lastUpdate,

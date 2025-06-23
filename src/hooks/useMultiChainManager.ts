@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useMemo } from 'react';
-import { SUPPORTED_CHAINS } from '../config/chainConfigurations';
 import { ChainConfig } from '../config/types';
 import { scanCrossChainOpportunities, CrossChainOpportunity } from '../services/opportunityScanner';
 import { getBestFlashLoanProvider, getBestDexRoute } from '../utils/flashLoanOptimizer';
@@ -8,8 +7,62 @@ import { getBestFlashLoanProvider, getBestDexRoute } from '../utils/flashLoanOpt
 export type { ChainConfig } from '../config/types';
 export type { CrossChainOpportunity } from '../services/opportunityScanner';
 
+// Focus on your 3 target chains only
+const TARGET_CHAINS: ChainConfig[] = [
+  {
+    id: 'solana',
+    name: 'Solana',
+    symbol: 'SOL',
+    chainId: 0,
+    rpcUrl: 'https://api.mainnet-beta.solana.com',
+    enabled: true,
+    color: '#9945FF',
+    flashLoanProviders: [
+      { name: 'Solend', fee: 0.09, maxAmount: 1000000, minAmount: 1000, available: true },
+      { name: 'Mango', fee: 0.05, maxAmount: 500000, minAmount: 500, available: true }
+    ],
+    dexes: [
+      { name: 'Raydium', fee: 0.25, liquidity: 50000000, slippage: 0.1 },
+      { name: 'Orca', fee: 0.3, liquidity: 30000000, slippage: 0.15 },
+      { name: 'Jupiter', fee: 0.2, liquidity: 80000000, slippage: 0.1 }
+    ]
+  },
+  {
+    id: 'base',
+    name: 'Base',
+    symbol: 'ETH',
+    chainId: 8453,
+    rpcUrl: 'https://mainnet.base.org',
+    enabled: true,
+    color: '#0052FF',
+    flashLoanProviders: [
+      { name: 'Aave V3', fee: 0.09, maxAmount: 2000000, minAmount: 1000, available: true }
+    ],
+    dexes: [
+      { name: 'Uniswap V3', fee: 0.3, liquidity: 100000000, slippage: 0.1 },
+      { name: 'SushiSwap', fee: 0.25, liquidity: 20000000, slippage: 0.2 }
+    ]
+  },
+  {
+    id: 'fantom',
+    name: 'Fantom',
+    symbol: 'FTM',
+    chainId: 250,
+    rpcUrl: 'https://rpc.ftm.tools',
+    enabled: true,
+    color: '#1969FF',
+    flashLoanProviders: [
+      { name: 'Geist', fee: 0.09, maxAmount: 1000000, minAmount: 500, available: true }
+    ],
+    dexes: [
+      { name: 'SpookySwap', fee: 0.2, liquidity: 15000000, slippage: 0.15 },
+      { name: 'SpiritSwap', fee: 0.25, liquidity: 8000000, slippage: 0.2 }
+    ]
+  }
+];
+
 export function useMultiChainManager() {
-  const [chains, setChains] = useState<ChainConfig[]>(SUPPORTED_CHAINS);
+  const [chains, setChains] = useState<ChainConfig[]>(TARGET_CHAINS);
   const [crossChainOpportunities, setCrossChainOpportunities] = useState<CrossChainOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [flashLoanMode, setFlashLoanMode] = useState(false);
@@ -29,6 +82,7 @@ export function useMultiChainManager() {
     try {
       const opportunities = await scanCrossChainOpportunities(enabledChains, flashLoanMode);
       setCrossChainOpportunities(opportunities);
+      console.log(`🔍 Scanned ${opportunities.length} opportunities across ${enabledChains.map(c => c.name).join(', ')}`);
     } catch (error) {
       console.error('Error scanning opportunities:', error);
     } finally {

@@ -29,7 +29,9 @@ import {
   Settings2,
   TrendingDown,
   Brain,
-  GraduationCap
+  GraduationCap,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import OptimizationDashboard from './optimization/OptimizationDashboard';
@@ -40,6 +42,7 @@ import MultiChainAIDashboard from './MultiChainAIDashboard';
 import MicroArbitrageMode from './MicroArbitrageMode';
 import SmartTimingEngine from './SmartTimingEngine';
 import ProgressiveCapitalMode from './ProgressiveCapitalMode';
+import { useFreeLivePrices } from '@/hooks/useFreeLivePrices';
 
 interface FlashArbitrageOpportunity {
   id: string;
@@ -87,7 +90,16 @@ interface TestingStats {
 const ZeroCapitalArbitrage = () => {
   const { toast } = useToast();
   
-  const [opportunities, setOpportunities] = useState<FlashArbitrageOpportunity[]>([]);
+  // Use live price data from your free service - focused on SOL, USDC, USDT, ETH only
+  const { 
+    flashLoanOpportunities: liveOpportunities, 
+    isConnected, 
+    lastUpdate, 
+    error: priceError,
+    refreshPrices,
+    apiKey 
+  } = useFreeLivePrices(['SOL', 'USDC', 'USDT', 'ETH']);
+  
   const [providers] = useState<FlashLoanProvider[]>([
     { name: 'Solend', fee: 0.09, maxAmount: 1000000, minAmount: 1000, available: true, estimatedTime: 2.1 },
     { name: 'Mango', fee: 0.05, maxAmount: 500000, minAmount: 500, available: true, estimatedTime: 1.8 },
@@ -140,62 +152,6 @@ const ZeroCapitalArbitrage = () => {
       setLiveModeUnlocked(true);
     }
   }, [testingStats]);
-
-  useEffect(() => {
-    const generateOpportunities = (): FlashArbitrageOpportunity[] => {
-      const pairs = ['SOL/USDC', 'SOL/USDT', 'ETH/SOL', 'RAY/SOL', 'ORCA/SOL'];
-      const dexes = ['Raydium', 'Orca', 'Jupiter', 'Serum'];
-      const opportunities: FlashArbitrageOpportunity[] = [];
-
-      for (let i = 0; i < 6; i++) {
-        const pair = pairs[Math.floor(Math.random() * pairs.length)];
-        const buyDex = dexes[Math.floor(Math.random() * dexes.length)];
-        let sellDex = dexes[Math.floor(Math.random() * dexes.length)];
-        while (sellDex === buyDex) {
-          sellDex = dexes[Math.floor(Math.random() * dexes.length)];
-        }
-
-        const spread = 0.8 + Math.random() * 2.5; // 0.8% to 3.3%
-        const requiredCapital = 5000 + Math.random() * 45000;
-        const provider = providers.find(p => p.name.toLowerCase() === selectedProvider);
-        const flashLoanFee = requiredCapital * (provider?.fee || 0.05) / 100;
-        const tradingFees = requiredCapital * 0.006; // 0.6% total trading fees
-        const totalFees = flashLoanFee + tradingFees;
-        const estimatedProfit = requiredCapital * spread / 100;
-        const netProfit = estimatedProfit - totalFees;
-        
-        const riskLevel: 'low' | 'medium' | 'high' = 
-          spread > 2.5 ? 'low' : spread > 1.5 ? 'medium' : 'high';
-        
-        opportunities.push({
-          id: `arb-${i}`,
-          pair,
-          buyDex,
-          sellDex,
-          spread,
-          estimatedProfit,
-          requiredCapital,
-          flashLoanFee,
-          totalFees,
-          netProfit,
-          riskLevel,
-          confidence: 75 + Math.random() * 20
-        });
-      }
-
-      return opportunities
-        .filter(opp => opp.netProfit > 0)
-        .sort((a, b) => b.netProfit - a.netProfit);
-    };
-
-    setOpportunities(generateOpportunities());
-    
-    const interval = setInterval(() => {
-      setOpportunities(generateOpportunities());
-    }, 8000);
-
-    return () => clearInterval(interval);
-  }, [selectedProvider, providers]);
 
   const handleLevelUp = (newLevel: number) => {
     setTraderStats(prev => ({ ...prev, currentLevel: newLevel }));
@@ -405,7 +361,7 @@ const ZeroCapitalArbitrage = () => {
     },
   };
 
-  const filteredOpportunities = opportunities.filter(opp => {
+  const filteredOpportunities = liveOpportunities.filter(opp => {
     const riskLevels = { low: 1, medium: 2, high: 3 };
     const maxRiskLevels = { low: 1, medium: 2, high: 3 };
     return opp.netProfit >= minProfitThreshold && 
@@ -427,10 +383,10 @@ const ZeroCapitalArbitrage = () => {
 
   // Enhanced batch opportunities with better data
   const batchableOpps = optimizedOpps.map((opt, idx) => ({
-    id: opportunities[idx].id,
+    id: filteredOpportunities[idx]?.id || `batch-${idx}`,
     label: `${opt.pair}: ${opt.optimalProvider.name}`,
     pair: opt.pair,
-    netProfit: (opportunities[idx].requiredCapital * opportunities[idx].spread) / 100 - opt.computedFees.total,
+    netProfit: (filteredOpportunities[idx]?.requiredCapital || 0) * (filteredOpportunities[idx]?.spread || 0) / 100 - opt.computedFees.total,
     requiredCapital: opt.requiredCapital,
     provider: opt.optimalProvider.name,
     buyDex: opt.optimalBuyDex.name,
@@ -446,7 +402,7 @@ const ZeroCapitalArbitrage = () => {
   const handleExecuteBatch = async (ids: string[]) => {
     setIsBatchExecuting(true);
     // Find original opps by ID
-    const toBatch = opportunities.filter((o) => ids.includes(o.id));
+    const toBatch = filteredOpportunities.filter((o) => ids.includes(o.id));
     for (const opp of toBatch) {
       // Use executeFlashArbitrage but in batch mode
       await executeFlashArbitrage(opp);
@@ -461,6 +417,72 @@ const ZeroCapitalArbitrage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Live Data Connection Status */}
+      <Card className={`border-2 ${isConnected ? 'border-green-500' : 'border-red-500'}`}>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isConnected ? <Wifi className="w-5 h-5 text-green-500" /> : <WifiOff className="w-5 h-5 text-red-500" />}
+              Live Price Feed Status
+            </div>
+            <div className="flex items-center gap-4">
+              <Badge variant={isConnected ? "default" : "destructive"}>
+                {isConnected ? 'LIVE DATA' : 'DISCONNECTED'}
+              </Badge>
+              <Button onClick={refreshPrices} size="sm" variant="outline">
+                Refresh
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert className={isConnected ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+            {isConnected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+            <AlertDescription>
+              {isConnected ? (
+                <div>
+                  <strong>✅ LIVE MODE ACTIVE:</strong> Getting real-time price data from your free API service.
+                  <br />
+                  <strong>Chains:</strong> Solana + Base + Fantom | 
+                  <strong> API Key:</strong> {apiKey} | 
+                  <strong> Last Update:</strong> {lastUpdate.toLocaleTimeString()}
+                  <br />
+                  <strong>Live Opportunities:</strong> {filteredOpportunities.length} cross-chain arbitrage opportunities detected
+                </div>
+              ) : (
+                <div>
+                  <strong>⚠️ CONNECTION LOST:</strong> Unable to fetch live price data. 
+                  {priceError && <span> Error: {priceError}</span>}
+                  <br />
+                  Click refresh to reconnect to your free price service.
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-500">{filteredOpportunities.length}</div>
+              <div className="text-sm text-muted-foreground">Live Opportunities</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-500">3</div>
+              <div className="text-sm text-muted-foreground">Target Chains</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-500">4</div>
+              <div className="text-sm text-muted-foreground">Tracked Tokens</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-500">
+                {isConnected ? Math.round((Date.now() - lastUpdate.getTime()) / 1000) : '--'}s
+              </div>
+              <div className="text-sm text-muted-foreground">Data Age</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Enhanced Testing Mode Header with Progressive Capital */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
