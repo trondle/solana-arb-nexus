@@ -1,4 +1,3 @@
-
 import { TabsContent } from '@/components/ui/tabs';
 import ZeroCapitalArbitrage from './ZeroCapitalArbitrage';
 import RiskManagement from './RiskManagement';
@@ -10,10 +9,15 @@ import PreExecutionValidator from './risk/PreExecutionValidator';
 import GraduatedLimits from './risk/GraduatedLimits';
 import SimulationBacktesting from './risk/SimulationBacktesting';
 import SafetyMechanisms from './risk/SafetyMechanisms';
+import LiveMEVDashboard from './LiveMEVDashboard';
 
 const DashboardContent = () => {
   return (
-    <>
+    <div className="space-y-8">
+      {/* Live MEV Dashboard - The main feature */}
+      <LiveMEVDashboard />
+      
+      {/* Other existing components */}
       <TabsContent value="zero-capital">
         <ZeroCapitalArbitrage />
       </TabsContent>
@@ -53,7 +57,7 @@ const DashboardContent = () => {
       <TabsContent value="safety-layers">
         <SafetyMechanisms />
       </TabsContent>
-    </>
+    </div>
   );
 };
 
