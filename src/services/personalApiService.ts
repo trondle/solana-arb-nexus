@@ -1,4 +1,3 @@
-
 import { LocalServiceAdapter } from './localServiceAdapter';
 
 interface PersonalApiConfig {
