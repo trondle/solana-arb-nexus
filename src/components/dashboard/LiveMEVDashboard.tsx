@@ -3,10 +3,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useLivePrices } from '@/hooks/useLivePrices';
-import { PersonalApiService } from '@/services/personalApiService';
+import { useFreeLivePrices } from '@/hooks/useFreeLivePrices';
 import { 
   Zap, 
   TrendingUp, 
@@ -17,19 +15,21 @@ import {
   WifiOff,
   RefreshCw,
   AlertTriangle,
-  CheckCircle 
+  CheckCircle,
+  Key
 } from 'lucide-react';
 
 const LiveMEVDashboard = () => {
   const { 
     prices, 
-    arbitragePrices, 
+    arbitrageOpportunities, 
     bestOpportunities, 
     isConnected, 
     lastUpdate, 
     error, 
-    refreshPrices 
-  } = useLivePrices(['SOL', 'USDC', 'USDT', 'ETH']);
+    refreshPrices,
+    apiKey
+  } = useFreeLivePrices(['SOL', 'USDC', 'USDT', 'ETH']);
 
   const [autoExecute, setAutoExecute] = useState(false);
   const [profitThreshold, setProfitThreshold] = useState(0.3);
@@ -38,22 +38,22 @@ const LiveMEVDashboard = () => {
 
   // Simulate MEV execution for demo
   const executeTrade = async (opportunity: any) => {
-    console.log('Executing MEV trade:', opportunity);
+    console.log('Executing FREE MEV trade:', opportunity);
     
     // Simulate trade execution
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const profit = (opportunity.profitOpportunity / 100) * 1000; // Simulate $1000 trade
+    const profit = (opportunity.profitPercent / 100) * 1000; // Simulate $1000 trade
     setTotalProfit(prev => prev + profit);
     setExecutedTrades(prev => prev + 1);
     
-    console.log(`✓ Trade executed: ${profit.toFixed(2)} profit`);
+    console.log(`✅ FREE API Trade executed: $${profit.toFixed(2)} profit`);
   };
 
   useEffect(() => {
     if (autoExecute && bestOpportunities.length > 0) {
       const topOpportunity = bestOpportunities[0];
-      if (topOpportunity.profitOpportunity && topOpportunity.profitOpportunity >= profitThreshold) {
+      if (topOpportunity.profitPercent >= profitThreshold) {
         executeTrade(topOpportunity);
       }
     }
@@ -72,11 +72,15 @@ const LiveMEVDashboard = () => {
                 <WifiOff className="w-5 h-5 text-red-500" />
               )}
               <span className="font-medium">
-                Live MEV Arbitrage System
+                FREE MEV Arbitrage System
               </span>
               <Badge variant={isConnected ? 'default' : 'destructive'}>
                 {isConnected ? 'LIVE' : 'OFFLINE'}
               </Badge>
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Key className="w-4 h-4" />
+                {apiKey || 'No API Key'}
+              </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Activity className="w-4 h-4" />
                 {lastUpdate.toLocaleTimeString()}
@@ -89,6 +93,15 @@ const LiveMEVDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Free Service Banner */}
+      <Alert className="border-green-200 bg-green-50">
+        <CheckCircle className="h-4 w-4 text-green-500" />
+        <AlertDescription className="text-green-700">
+          <strong>FREE SERVICE:</strong> This system uses your own price API - No Jupiter, 1inch, or CoinGecko fees! 
+          Live data from Binance, Coinbase, and DexScreener public endpoints.
+        </AlertDescription>
+      </Alert>
 
       {error && (
         <Alert className="border-red-200 bg-red-50">
@@ -117,7 +130,7 @@ const LiveMEVDashboard = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Executed Trades</p>
+                <p className="text-sm text-muted-foreground">FREE Trades</p>
                 <p className="text-2xl font-bold">{executedTrades}</p>
               </div>
               <Target className="w-8 h-8 text-blue-600" />
@@ -157,10 +170,13 @@ const LiveMEVDashboard = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
-            Live MEV Arbitrage Opportunities
+            FREE Live MEV Arbitrage Opportunities
             {bestOpportunities.length > 0 && (
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             )}
+            <Badge variant="outline" className="ml-auto">
+              No API Costs!
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -168,7 +184,7 @@ const LiveMEVDashboard = () => {
             <div className="text-center py-8">
               <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No profitable opportunities detected</p>
-              <p className="text-sm text-muted-foreground">Scanning Jupiter, Base, and Fantom...</p>
+              <p className="text-sm text-muted-foreground">Scanning Solana, Base, and Fantom with FREE APIs...</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -178,50 +194,60 @@ const LiveMEVDashboard = () => {
                     <div className="flex items-center gap-3">
                       <Badge variant="outline">{opp.token}</Badge>
                       <span className="text-sm text-muted-foreground">
-                        Buy: {opp.bestBuy?.chain} → Sell: {opp.bestSell?.chain}
+                        Buy: {opp.buyChain} → Sell: {opp.sellChain}
                       </span>
+                      <Badge variant="outline" className="text-green-600">
+                        FREE API
+                      </Badge>
                     </div>
                     <Badge variant={
-                      (opp.profitOpportunity || 0) > 1 ? 'default' : 
-                      (opp.profitOpportunity || 0) > 0.5 ? 'secondary' : 'outline'
+                      opp.profitPercent > 1 ? 'default' : 
+                      opp.profitPercent > 0.5 ? 'secondary' : 'outline'
                     }>
-                      +{opp.profitOpportunity?.toFixed(2)}%
+                      +{opp.profitPercent.toFixed(2)}%
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm mb-3">
                     <div>
                       <p className="text-muted-foreground">Buy Price</p>
-                      <p className="font-semibold">${opp.bestBuy?.price.toFixed(4)}</p>
+                      <p className="font-semibold">${opp.buyPrice.toFixed(4)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Sell Price</p>
-                      <p className="font-semibold">${opp.bestSell?.price.toFixed(4)}</p>
+                      <p className="font-semibold">${opp.sellPrice.toFixed(4)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Est. Profit</p>
                       <p className="font-semibold text-green-600">
-                        ${((opp.profitOpportunity || 0) * 10).toFixed(2)}
+                        ${opp.estimatedProfit.toFixed(2)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Volume Check</p>
-                      <p className="font-semibold">
-                        {opp.solanaPrice?.volume24h || opp.basePrice?.volume24h ? '✓' : '⚠️'}
-                      </p>
+                      <p className="text-muted-foreground">Risk Level</p>
+                      <Badge variant={
+                        opp.riskLevel === 'LOW' ? 'default' :
+                        opp.riskLevel === 'MEDIUM' ? 'secondary' : 'destructive'
+                      }>
+                        {opp.riskLevel}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Confidence</p>
+                      <p className="font-semibold">{(opp.confidence * 100).toFixed(0)}%</p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">
-                      Last updated: {lastUpdate.toLocaleTimeString()}
+                      Last updated: {lastUpdate.toLocaleTimeString()} • FREE API Service
                     </div>
                     <Button 
                       size="sm" 
                       onClick={() => executeTrade(opp)}
                       className="bg-green-500 hover:bg-green-600"
                     >
-                      Execute MEV Trade
+                      Execute FREE MEV Trade
                     </Button>
                   </div>
                 </div>
@@ -234,32 +260,31 @@ const LiveMEVDashboard = () => {
       {/* Chain Price Monitor */}
       <Card>
         <CardHeader>
-          <CardTitle>Multi-Chain Price Monitor</CardTitle>
+          <CardTitle>Multi-Chain Price Monitor (FREE)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {arbitragePrices.map((tokenData) => (
-              <div key={tokenData.token} className="border rounded p-3">
-                <h4 className="font-semibold mb-2">{tokenData.token}</h4>
-                <div className="space-y-2 text-sm">
-                  {tokenData.solanaPrice && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Solana:</span>
-                      <span>${tokenData.solanaPrice.price.toFixed(4)}</span>
-                    </div>
-                  )}
-                  {tokenData.basePrice && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Base:</span>
-                      <span>${tokenData.basePrice.price.toFixed(4)}</span>
-                    </div>
-                  )}
-                  {tokenData.fantomPrice && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fantom:</span>
-                      <span>${tokenData.fantomPrice.price.toFixed(4)}</span>
-                    </div>
-                  )}
+            {Object.entries(prices).map(([key, priceData]) => (
+              <div key={key} className="border rounded p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold">{priceData.symbol}</h4>
+                  <Badge variant="outline">{priceData.chain?.toUpperCase()}</Badge>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Price:</span>
+                    <span className="font-semibold">${priceData.price.toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">24h Change:</span>
+                    <span className={priceData.change24h >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {priceData.change24h >= 0 ? '+' : ''}{priceData.change24h.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Source:</span>
+                    <span className="text-xs">{priceData.source}</span>
+                  </div>
                 </div>
               </div>
             ))}

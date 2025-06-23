@@ -1,3 +1,4 @@
+
 import { TabsContent } from '@/components/ui/tabs';
 import ZeroCapitalArbitrage from './ZeroCapitalArbitrage';
 import RiskManagement from './RiskManagement';
@@ -10,12 +11,16 @@ import GraduatedLimits from './risk/GraduatedLimits';
 import SimulationBacktesting from './risk/SimulationBacktesting';
 import SafetyMechanisms from './risk/SafetyMechanisms';
 import LiveMEVDashboard from './LiveMEVDashboard';
+import FreeApiManager from './FreeApiManager';
 
 const DashboardContent = () => {
   return (
     <div className="space-y-8">
       {/* Live MEV Dashboard - The main feature */}
       <LiveMEVDashboard />
+      
+      {/* Free API Manager - Your own price service */}
+      <FreeApiManager />
       
       {/* Other existing components */}
       <TabsContent value="zero-capital">
