@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { ChainConfig } from '../config/types';
 import { scanCrossChainOpportunities, CrossChainOpportunity } from '../services/opportunityScanner';
 import { getBestFlashLoanProvider, getBestDexRoute } from '../utils/flashLoanOptimizer';
+import { useFreeLivePrices } from './useFreeLivePrices';
 
 export type { ChainConfig } from '../config/types';
 export type { CrossChainOpportunity } from '../services/opportunityScanner';
@@ -76,6 +77,9 @@ export function useMultiChainManager() {
   const [isScanning, setIsScanning] = useState(false);
   const [flashLoanMode, setFlashLoanMode] = useState(false);
 
+  // Get live data from free prices service
+  const { arbitrageOpportunities, isConnected } = useFreeLivePrices(['SOL', 'ETH', 'USDC', 'USDT', 'FTM']);
+
   const enabledChains = useMemo(() => chains.filter(chain => chain.enabled), [chains]);
 
   const toggleChain = (chainId: string) => {
@@ -84,28 +88,39 @@ export function useMultiChainManager() {
     ));
   };
 
-  const scanOpportunities = async () => {
-    if (enabledChains.length <= 1) return;
-    
-    setIsScanning(true);
-    try {
-      const opportunities = await scanCrossChainOpportunities(enabledChains, flashLoanMode);
-      setCrossChainOpportunities(opportunities);
-      console.log(`🔍 Scanned ${opportunities.length} opportunities across ${enabledChains.map(c => c.name).join(', ')}`);
-    } catch (error) {
-      console.error('Error scanning opportunities:', error);
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
+  // Convert live arbitrage opportunities to cross-chain opportunities
   useEffect(() => {
-    if (enabledChains.length > 1) {
-      scanOpportunities();
-      const interval = setInterval(scanOpportunities, 12000);
-      return () => clearInterval(interval);
+    if (flashLoanMode && isConnected && arbitrageOpportunities.length > 0) {
+      const liveOpportunities: CrossChainOpportunity[] = arbitrageOpportunities.map((opp, index) => ({
+        id: `live-${index}`,
+        fromChain: typeof opp.buyChain === 'string' ? opp.buyChain : 
+                   opp.buyChain === 8453 ? 'base' : 
+                   opp.buyChain === 250 ? 'fantom' : 'solana',
+        toChain: typeof opp.sellChain === 'string' ? opp.sellChain : 
+                opp.sellChain === 8453 ? 'base' : 
+                opp.sellChain === 250 ? 'fantom' : 'solana',
+        token: opp.token,
+        buyPrice: opp.buyPrice,
+        sellPrice: opp.sellPrice,
+        spread: opp.profitPercent,
+        estimatedProfit: opp.estimatedProfit,
+        confidence: opp.confidence,
+        riskLevel: opp.riskLevel,
+        lastUpdated: Date.now()
+      }));
+      
+      setCrossChainOpportunities(liveOpportunities);
+      console.log(`🔄 Updated ${liveOpportunities.length} live cross-chain opportunities`);
+    } else if (!flashLoanMode) {
+      // Only clear opportunities when flash loan mode is disabled
+      setCrossChainOpportunities([]);
     }
-  }, [enabledChains.length, flashLoanMode]);
+  }, [arbitrageOpportunities, flashLoanMode, isConnected]);
+
+  // Set scanning state based on connection status
+  useEffect(() => {
+    setIsScanning(!isConnected && flashLoanMode);
+  }, [isConnected, flashLoanMode]);
 
   return {
     chains,
@@ -115,7 +130,7 @@ export function useMultiChainManager() {
     flashLoanMode,
     toggleChain,
     setFlashLoanMode,
-    scanCrossChainOpportunities: scanOpportunities,
+    scanCrossChainOpportunities: () => {}, // No longer needed with live data
     getBestFlashLoanProvider,
     getBestDexRoute
   };

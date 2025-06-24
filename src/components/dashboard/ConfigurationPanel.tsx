@@ -1,312 +1,192 @@
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import React, { useState } from 'react';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Settings, Shield, Zap, DollarSign, Save } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-interface TradingConfig {
-  minSpread: number;
-  maxTradeAmount: number;
-  minLiquidity: number;
-  gasLimit: number;
-  slippageTolerance: number;
-  enableAutoExecution: boolean;
-  riskLevel: number;
-  blacklistedTokens: string;
-  whitelistedDexs: string[];
-  maxConcurrentTrades: number;
-}
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Settings, Zap, Shield, TrendingUp, Activity } from 'lucide-react';
+import { useFreeLivePrices } from '../../hooks/useFreeLivePrices';
 
 const ConfigurationPanel = () => {
-  const { toast } = useToast();
-  const [config, setConfig] = useState<TradingConfig>({
-    minSpread: 1.5,
-    maxTradeAmount: 10000,
-    minLiquidity: 50000,
-    gasLimit: 200000,
-    slippageTolerance: 0.5,
-    enableAutoExecution: false,
-    riskLevel: 3,
-    blacklistedTokens: '',
-    whitelistedDexs: ['raydium', 'orca', 'jupiter'],
-    maxConcurrentTrades: 3
-  });
+  const [minProfitThreshold, setMinProfitThreshold] = useState([5]);
+  const [maxRiskLevel, setMaxRiskLevel] = useState('medium');
+  const [autoExecution, setAutoExecution] = useState(false);
+  const [maxCapitalPerTrade, setMaxCapitalPerTrade] = useState('10000');
+  const [enableNotifications, setEnableNotifications] = useState(true);
+  const [slippageTolerance, setSlippageTolerance] = useState([0.5]);
 
-  const [rpcUrls, setRpcUrls] = useState<string[]>([
-    'https://api.mainnet-beta.solana.com',
-    'https://solana-api.projectserum.com',
-    'https://rpc.ankr.com/solana'
-  ]);
-
-  const [newRpcUrl, setNewRpcUrl] = useState('');
-
-  const handleConfigSave = () => {
-    // Simulate saving configuration
-    toast({
-      title: "Configuration Saved",
-      description: "Your trading parameters have been updated successfully.",
-    });
-  };
-
-  const addRpcUrl = () => {
-    if (newRpcUrl && !rpcUrls.includes(newRpcUrl)) {
-      setRpcUrls([...rpcUrls, newRpcUrl]);
-      setNewRpcUrl('');
-      toast({
-        title: "RPC URL Added",
-        description: "New RPC endpoint has been added to the list.",
-      });
-    }
-  };
-
-  const removeRpcUrl = (url: string) => {
-    setRpcUrls(rpcUrls.filter(u => u !== url));
-  };
-
-  const toggleDex = (dex: string) => {
-    setConfig(prev => ({
-      ...prev,
-      whitelistedDexs: prev.whitelistedDexs.includes(dex)
-        ? prev.whitelistedDexs.filter(d => d !== dex)
-        : [...prev.whitelistedDexs, dex]
-    }));
-  };
-
-  const getRiskLevelText = (level: number) => {
-    switch (level) {
-      case 1: return 'Very Conservative';
-      case 2: return 'Conservative';
-      case 3: return 'Moderate';
-      case 4: return 'Aggressive';
-      case 5: return 'Very Aggressive';
-      default: return 'Moderate';
-    }
-  };
-
-  const getRiskLevelColor = (level: number) => {
-    if (level <= 2) return 'text-green-500';
-    if (level === 3) return 'text-yellow-500';
-    return 'text-red-500';
-  };
+  const { isConnected, error } = useFreeLivePrices();
 
   return (
-    <div className="space-y-6">
-      {/* Trading Parameters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Trading Parameters
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="minSpread">Minimum Spread (%)</Label>
-                <Input
-                  id="minSpread"
-                  type="number"
-                  step="0.1"
-                  value={config.minSpread}
-                  onChange={(e) => setConfig(prev => ({ ...prev, minSpread: parseFloat(e.target.value) }))}
-                />
-                <div className="text-sm text-muted-foreground">
-                  Only execute trades with spreads above this threshold
-                </div>
-              </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Settings className="w-5 h-5" />
+          Live Trading Configuration
+          {isConnected && (
+            <Badge variant="default" className="bg-green-500">
+              <Activity className="w-3 h-3 mr-1" />
+              LIVE
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Live Data Status */}
+        <Alert className={isConnected ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+          <Activity className={`h-4 w-4 ${isConnected ? 'text-green-600' : 'text-red-600'}`} />
+          <AlertDescription className={isConnected ? 'text-green-800' : 'text-red-800'}>
+            {isConnected ? (
+              <>
+                <strong>Live Data Connected</strong><br />
+                Real-time price feeds and arbitrage detection active
+              </>
+            ) : (
+              <>
+                <strong>Live Data Disconnected</strong><br />
+                {error || 'Enable flash loan mode to connect to live data feeds'}
+              </>
+            )}
+          </AlertDescription>
+        </Alert>
 
-              <div className="space-y-2">
-                <Label htmlFor="maxTradeAmount">Max Trade Amount (USD)</Label>
-                <Input
-                  id="maxTradeAmount"
-                  type="number"
-                  value={config.maxTradeAmount}
-                  onChange={(e) => setConfig(prev => ({ ...prev, maxTradeAmount: parseFloat(e.target.value) }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="minLiquidity">Minimum Liquidity (USD)</Label>
-                <Input
-                  id="minLiquidity"
-                  type="number"
-                  value={config.minLiquidity}
-                  onChange={(e) => setConfig(prev => ({ ...prev, minLiquidity: parseFloat(e.target.value) }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="gasLimit">Gas Limit</Label>
-                <Input
-                  id="gasLimit"
-                  type="number"
-                  value={config.gasLimit}
-                  onChange={(e) => setConfig(prev => ({ ...prev, gasLimit: parseInt(e.target.value) }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="slippage">Slippage Tolerance (%)</Label>
-                <Input
-                  id="slippage"
-                  type="number"
-                  step="0.1"
-                  value={config.slippageTolerance}
-                  onChange={(e) => setConfig(prev => ({ ...prev, slippageTolerance: parseFloat(e.target.value) }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxTrades">Max Concurrent Trades</Label>
-                <Input
-                  id="maxTrades"
-                  type="number"
-                  value={config.maxConcurrentTrades}
-                  onChange={(e) => setConfig(prev => ({ ...prev, maxConcurrentTrades: parseInt(e.target.value) }))}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="autoExecution">Auto Execution</Label>
-                <div className="text-sm text-muted-foreground">
-                  Automatically execute profitable trades
-                </div>
-              </div>
-              <Switch
-                id="autoExecution"
-                checked={config.enableAutoExecution}
-                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, enableAutoExecution: checked }))}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label>Risk Level: <span className={getRiskLevelColor(config.riskLevel)}>{getRiskLevelText(config.riskLevel)}</span></Label>
-              <Slider
-                value={[config.riskLevel]}
-                onValueChange={(value) => setConfig(prev => ({ ...prev, riskLevel: value[0] }))}
-                max={5}
-                min={1}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Conservative</span>
-                <span>Aggressive</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* DEX Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
-            DEX Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Label>Whitelisted DEXs</Label>
-            <div className="flex gap-2">
-              {['raydium', 'orca', 'jupiter'].map((dex) => (
-                <Badge
-                  key={dex}
-                  variant={config.whitelistedDexs.includes(dex) ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => toggleDex(dex)}
-                >
-                  {dex.charAt(0).toUpperCase() + dex.slice(1)}
-                </Badge>
-              ))}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Click to enable/disable DEXs for trading
-            </div>
-          </div>
-
-          <Separator className="my-4" />
-
-          <div className="space-y-2">
-            <Label htmlFor="blacklisted">Blacklisted Tokens</Label>
-            <Textarea
-              id="blacklisted"
-              placeholder="Enter token addresses separated by commas"
-              value={config.blacklistedTokens}
-              onChange={(e) => setConfig(prev => ({ ...prev, blacklistedTokens: e.target.value }))}
+        {/* Profit Threshold */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Minimum Profit Threshold
+          </Label>
+          <div className="px-2">
+            <Slider
+              value={minProfitThreshold}
+              onValueChange={setMinProfitThreshold}
+              max={50}
+              min={1}
+              step={1}
+              className="w-full"
             />
-            <div className="text-sm text-muted-foreground">
-              Tokens that should never be traded
-            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Network Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Network Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>RPC Endpoints</Label>
-            <div className="space-y-2">
-              {rpcUrls.map((url, index) => (
-                <div key={index} className="flex items-center justify-between p-2 border rounded">
-                  <span className="text-sm font-mono">{url}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeRpcUrl(url)}
-                    disabled={rpcUrls.length <= 1}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>$1</span>
+            <span className="font-semibold">${minProfitThreshold[0]}</span>
+            <span>$50</span>
           </div>
+        </div>
 
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add new RPC URL"
-              value={newRpcUrl}
-              onChange={(e) => setNewRpcUrl(e.target.value)}
+        {/* Risk Level */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            Maximum Risk Level
+          </Label>
+          <Select value={maxRiskLevel} onValueChange={setMaxRiskLevel}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low Risk (80%+ confidence)</SelectItem>
+              <SelectItem value="medium">Medium Risk (60%+ confidence)</SelectItem>
+              <SelectItem value="high">High Risk (40%+ confidence)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Slippage Tolerance */}
+        <div className="space-y-2">
+          <Label>Slippage Tolerance</Label>
+          <div className="px-2">
+            <Slider
+              value={slippageTolerance}
+              onValueChange={setSlippageTolerance}
+              max={5}
+              min={0.1}
+              step={0.1}
+              className="w-full"
             />
-            <Button onClick={addRpcUrl}>Add</Button>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>0.1%</span>
+            <span className="font-semibold">{slippageTolerance[0]}%</span>
+            <span>5%</span>
+          </div>
+        </div>
 
-      {/* Save Configuration */}
-      <Card>
-        <CardContent className="pt-6">
-          <Button onClick={handleConfigSave} className="w-full" size="lg">
-            <Save className="w-4 h-4 mr-2" />
-            Save Configuration
+        {/* Capital Limits */}
+        <div className="space-y-2">
+          <Label>Maximum Capital Per Trade</Label>
+          <Input
+            type="number"
+            value={maxCapitalPerTrade}
+            onChange={(e) => setMaxCapitalPerTrade(e.target.value)}
+            placeholder="10000"
+          />
+          <div className="text-sm text-muted-foreground">
+            Maximum amount to allocate for flash loan arbitrage
+          </div>
+        </div>
+
+        {/* Auto Execution */}
+        <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div>
+            <Label htmlFor="auto-execution" className="font-semibold">
+              Auto Execution (Live Data)
+            </Label>
+            <div className="text-sm text-muted-foreground">
+              Automatically execute profitable opportunities
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch 
+              id="auto-execution"
+              checked={autoExecution}
+              onCheckedChange={setAutoExecution}
+              disabled={!isConnected}
+            />
+            <Badge variant={autoExecution ? 'default' : 'secondary'}>
+              {autoExecution ? 'ON' : 'OFF'}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div>
+            <Label htmlFor="notifications">Live Opportunity Alerts</Label>
+            <div className="text-sm text-muted-foreground">
+              Get notified of profitable live opportunities
+            </div>
+          </div>
+          <Switch 
+            id="notifications"
+            checked={enableNotifications}
+            onCheckedChange={setEnableNotifications}
+          />
+        </div>
+
+        {/* Live Configuration Actions */}
+        <div className="space-y-2">
+          <Button 
+            className="w-full" 
+            disabled={!isConnected}
+            variant={isConnected ? "default" : "secondary"}
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            {isConnected ? 'Apply Live Configuration' : 'Connect to Live Data First'}
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+          
+          {isConnected && (
+            <div className="text-xs text-center text-green-600">
+              Configuration will be applied to live trading engine
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
