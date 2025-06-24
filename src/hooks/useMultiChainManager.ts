@@ -91,31 +91,38 @@ export function useMultiChainManager() {
   // Convert live arbitrage opportunities to cross-chain opportunities
   useEffect(() => {
     if (flashLoanMode && isConnected && arbitrageOpportunities.length > 0) {
-      const liveOpportunities: CrossChainOpportunity[] = arbitrageOpportunities.map((opp, index) => ({
-        id: `live-${index}`,
-        fromChain: typeof opp.buyChain === 'string' ? opp.buyChain : 
-                   opp.buyChain === 8453 ? 'base' : 
-                   opp.buyChain === 250 ? 'fantom' : 'solana',
-        toChain: typeof opp.sellChain === 'string' ? opp.sellChain : 
-                opp.sellChain === 8453 ? 'base' : 
-                opp.sellChain === 250 ? 'fantom' : 'solana',
-        token: opp.token,
-        pair: `${opp.token}/USDC`,
-        buyPrice: opp.buyPrice,
-        sellPrice: opp.sellPrice,
-        spread: opp.profitPercent,
-        estimatedProfit: opp.estimatedProfit,
-        confidence: opp.confidence,
-        riskLevel: opp.riskLevel,
-        lastUpdated: Date.now(),
-        bridgeFee: 0.1, // Default bridge fee
-        gasCost: 0.01, // Default gas cost
-        totalFees: 0.11, // bridgeFee + gasCost
-        netProfit: Math.max(0, opp.estimatedProfit - 0.11), // profit minus fees
-        executionTime: 5000, // 5 seconds default
-        liquidityDepth: 1000000, // Default liquidity
-        slippageImpact: 0.1 // Default slippage
-      }));
+      const liveOpportunities: CrossChainOpportunity[] = arbitrageOpportunities.map((opp, index) => {
+        const requiredCapital = 2000 + Math.random() * 23000; // $2k-$25k range
+        
+        return {
+          id: `live-${index}`,
+          fromChain: typeof opp.buyChain === 'string' ? opp.buyChain : 
+                     opp.buyChain === 8453 ? 'base' : 
+                     opp.buyChain === 250 ? 'fantom' : 'solana',
+          toChain: typeof opp.sellChain === 'string' ? opp.sellChain : 
+                  opp.sellChain === 8453 ? 'base' : 
+                  opp.sellChain === 250 ? 'fantom' : 'solana',
+          token: opp.token,
+          pair: `${opp.token}/USDC`,
+          buyPrice: opp.buyPrice,
+          sellPrice: opp.sellPrice,
+          spread: opp.profitPercent,
+          estimatedProfit: opp.estimatedProfit,
+          confidence: opp.confidence,
+          riskLevel: opp.riskLevel.toLowerCase() as 'low' | 'medium' | 'high',
+          lastUpdated: Date.now(),
+          bridgeFee: 0.1, // Default bridge fee
+          gasCost: 0.01, // Default gas cost
+          totalFees: 0.11, // bridgeFee + gasCost
+          netProfit: Math.max(0, opp.estimatedProfit - 0.11), // profit minus fees
+          executionTime: 5000, // 5 seconds default
+          liquidityDepth: 1000000, // Default liquidity
+          slippageImpact: 0.1, // Default slippage
+          requiresCapital: requiredCapital,
+          flashLoanEnabled: true,
+          actualAmount: requiredCapital
+        };
+      });
       
       setCrossChainOpportunities(liveOpportunities);
       console.log(`🔄 Updated ${liveOpportunities.length} live cross-chain opportunities`);
