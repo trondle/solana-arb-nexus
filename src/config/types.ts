@@ -3,14 +3,16 @@ export interface ChainConfig {
   id: string;
   name: string;
   symbol: string;
+  chainId: number;
   rpcUrl: string;
-  explorerUrl: string;
+  explorerUrl?: string;
   flashLoanProviders: FlashLoanProvider[];
   dexes: DEXConfig[];
-  gasCost: number;
-  blockTime: number;
+  gasCost?: number;
+  blockTime?: number;
   enabled: boolean;
-  networkFee: number;
+  networkFee?: number;
+  color?: string;
 }
 
 export interface FlashLoanProvider {

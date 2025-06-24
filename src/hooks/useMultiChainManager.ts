@@ -17,6 +17,9 @@ const TARGET_CHAINS: ChainConfig[] = [
     rpcUrl: 'https://api.mainnet-beta.solana.com',
     enabled: true,
     color: '#9945FF',
+    gasCost: 0.000005,
+    blockTime: 400,
+    networkFee: 0.000005,
     flashLoanProviders: [
       { name: 'Solend', fee: 0.09, maxAmount: 1000000, minAmount: 1000, available: true, reliability: 95 },
       { name: 'Mango', fee: 0.05, maxAmount: 500000, minAmount: 500, available: true, reliability: 90 }
@@ -35,6 +38,9 @@ const TARGET_CHAINS: ChainConfig[] = [
     rpcUrl: 'https://mainnet.base.org',
     enabled: true,
     color: '#0052FF',
+    gasCost: 0.001,
+    blockTime: 2000,
+    networkFee: 0.0005,
     flashLoanProviders: [
       { name: 'Aave V3', fee: 0.09, maxAmount: 2000000, minAmount: 1000, available: true, reliability: 98 }
     ],
@@ -51,6 +57,9 @@ const TARGET_CHAINS: ChainConfig[] = [
     rpcUrl: 'https://rpc.ftm.tools',
     enabled: true,
     color: '#1969FF',
+    gasCost: 0.0001,
+    blockTime: 1000,
+    networkFee: 0.00005,
     flashLoanProviders: [
       { name: 'Geist', fee: 0.09, maxAmount: 1000000, minAmount: 500, available: true, reliability: 88 }
     ],
