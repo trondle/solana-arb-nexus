@@ -100,13 +100,21 @@ export function useMultiChainManager() {
                 opp.sellChain === 8453 ? 'base' : 
                 opp.sellChain === 250 ? 'fantom' : 'solana',
         token: opp.token,
+        pair: `${opp.token}/USDC`,
         buyPrice: opp.buyPrice,
         sellPrice: opp.sellPrice,
         spread: opp.profitPercent,
         estimatedProfit: opp.estimatedProfit,
         confidence: opp.confidence,
         riskLevel: opp.riskLevel,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
+        bridgeFee: 0.1, // Default bridge fee
+        gasCost: 0.01, // Default gas cost
+        totalFees: 0.11, // bridgeFee + gasCost
+        netProfit: Math.max(0, opp.estimatedProfit - 0.11), // profit minus fees
+        executionTime: 5000, // 5 seconds default
+        liquidityDepth: 1000000, // Default liquidity
+        slippageImpact: 0.1 // Default slippage
       }));
       
       setCrossChainOpportunities(liveOpportunities);

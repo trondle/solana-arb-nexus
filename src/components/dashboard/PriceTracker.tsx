@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { TrendingUp, TrendingDown, RefreshCw, Activity, WifiOff } from 'lucide-react';
 import { useFreeLivePrices } from '../../hooks/useFreeLivePrices';
 
