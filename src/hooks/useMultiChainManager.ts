@@ -18,8 +18,8 @@ const TARGET_CHAINS: ChainConfig[] = [
     enabled: true,
     color: '#9945FF',
     flashLoanProviders: [
-      { name: 'Solend', fee: 0.09, maxAmount: 1000000, minAmount: 1000, available: true },
-      { name: 'Mango', fee: 0.05, maxAmount: 500000, minAmount: 500, available: true }
+      { name: 'Solend', fee: 0.09, maxAmount: 1000000, minAmount: 1000, available: true, reliability: 95 },
+      { name: 'Mango', fee: 0.05, maxAmount: 500000, minAmount: 500, available: true, reliability: 90 }
     ],
     dexes: [
       { name: 'Raydium', fee: 0.25, liquidity: 50000000, slippage: 0.1 },
@@ -36,7 +36,7 @@ const TARGET_CHAINS: ChainConfig[] = [
     enabled: true,
     color: '#0052FF',
     flashLoanProviders: [
-      { name: 'Aave V3', fee: 0.09, maxAmount: 2000000, minAmount: 1000, available: true }
+      { name: 'Aave V3', fee: 0.09, maxAmount: 2000000, minAmount: 1000, available: true, reliability: 98 }
     ],
     dexes: [
       { name: 'Uniswap V3', fee: 0.3, liquidity: 100000000, slippage: 0.1 },
@@ -52,7 +52,7 @@ const TARGET_CHAINS: ChainConfig[] = [
     enabled: true,
     color: '#1969FF',
     flashLoanProviders: [
-      { name: 'Geist', fee: 0.09, maxAmount: 1000000, minAmount: 500, available: true }
+      { name: 'Geist', fee: 0.09, maxAmount: 1000000, minAmount: 500, available: true, reliability: 88 }
     ],
     dexes: [
       { name: 'SpookySwap', fee: 0.2, liquidity: 15000000, slippage: 0.15 },
