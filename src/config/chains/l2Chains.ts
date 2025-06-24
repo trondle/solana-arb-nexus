@@ -1,3 +1,4 @@
+
 import { ChainConfig } from '../types';
 
 export const L2_CHAINS: ChainConfig[] = [
@@ -5,6 +6,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'arbitrum',
     name: 'Arbitrum',
     symbol: 'ARB',
+    chainId: 42161,
     rpcUrl: 'https://arb1.arbitrum.io/rpc',
     explorerUrl: 'https://arbiscan.io',
     gasCost: 0.0003,
@@ -24,6 +26,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'base',
     name: 'Base',
     symbol: 'ETH',
+    chainId: 8453,
     rpcUrl: 'https://mainnet.base.org',
     explorerUrl: 'https://basescan.org',
     gasCost: 0.0001,
@@ -45,6 +48,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'optimism',
     name: 'Optimism',
     symbol: 'ETH',
+    chainId: 10,
     rpcUrl: 'https://mainnet.optimism.io',
     explorerUrl: 'https://optimistic.etherscan.io',
     gasCost: 0.0005,
@@ -66,6 +70,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'zksync-era',
     name: 'zkSync Era',
     symbol: 'ETH',
+    chainId: 324,
     rpcUrl: 'https://mainnet.era.zksync.io',
     explorerUrl: 'https://explorer.zksync.io',
     gasCost: 0.0008,
@@ -87,6 +92,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'linea',
     name: 'Linea',
     symbol: 'ETH',
+    chainId: 59144,
     rpcUrl: 'https://rpc.linea.build',
     explorerUrl: 'https://lineascan.build',
     gasCost: 0.0006,
@@ -108,6 +114,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'scroll',
     name: 'Scroll',
     symbol: 'ETH',
+    chainId: 534352,
     rpcUrl: 'https://rpc.scroll.io',
     explorerUrl: 'https://scrollscan.com',
     gasCost: 0.0007,
@@ -129,6 +136,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'mantle',
     name: 'Mantle',
     symbol: 'MNT',
+    chainId: 5000,
     rpcUrl: 'https://rpc.mantle.xyz',
     explorerUrl: 'https://explorer.mantle.xyz',
     gasCost: 0.0003,
@@ -150,6 +158,7 @@ export const L2_CHAINS: ChainConfig[] = [
     id: 'starknet',
     name: 'Starknet',
     symbol: 'ETH',
+    chainId: 1536727068981429685321, // Starknet chain ID is very large
     rpcUrl: 'https://starknet-mainnet.public.blastapi.io',
     explorerUrl: 'https://starkscan.co',
     gasCost: 0.0009,

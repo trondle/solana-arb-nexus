@@ -6,6 +6,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     id: 'solana',
     name: 'Solana',
     symbol: 'SOL',
+    chainId: 0, // Solana doesn't use EVM chain IDs
     rpcUrl: 'https://api.mainnet-beta.solana.com',
     explorerUrl: 'https://solscan.io',
     gasCost: 0.000005,
@@ -28,6 +29,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     id: 'deso',
     name: 'DeSo',
     symbol: 'DESO',
+    chainId: 314159, // DeSo chain ID
     rpcUrl: 'https://node.deso.org/api/v0',
     explorerUrl: 'https://explorer.deso.org',
     gasCost: 0.0001,
@@ -47,6 +49,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     id: 'sui',
     name: 'Sui',
     symbol: 'SUI',
+    chainId: 101, // Sui chain ID
     rpcUrl: 'https://fullnode.mainnet.sui.io',
     explorerUrl: 'https://explorer.sui.io',
     gasCost: 0.0002,
@@ -68,6 +71,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     id: 'terra-classic',
     name: 'Terra Classic',
     symbol: 'LUNC',
+    chainId: 330, // Terra Classic chain ID
     rpcUrl: 'https://terra-classic-fcd.publicnode.com',
     explorerUrl: 'https://finder.terra.money/classic',
     gasCost: 0.50,
@@ -89,6 +93,7 @@ export const ALTERNATIVE_CHAINS: ChainConfig[] = [
     id: 'aptos',
     name: 'Aptos',
     symbol: 'APT',
+    chainId: 1, // Aptos chain ID
     rpcUrl: 'https://fullnode.mainnet.aptoslabs.com/v1',
     explorerUrl: 'https://explorer.aptoslabs.com',
     gasCost: 0.0002,
