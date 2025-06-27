@@ -9,6 +9,7 @@ import PriceTracker from './PriceTracker';
 import ExecutionProgress from './ExecutionProgress';
 import ConfigurationPanel from './ConfigurationPanel';
 import TestModePanel from './TestModePanel';
+import EnhancedArbitrageDashboard from './EnhancedArbitrageDashboard';
 
 const DashboardContent = () => {
   // Multi-chain management
@@ -59,7 +60,10 @@ const DashboardContent = () => {
         toggleChain={toggleChain}
       />
       
-      {/* Live Flash Loan Opportunities - Main Focus */}
+      {/* NEW: Enhanced Arbitrage Dashboard - This is the main attraction now */}
+      <EnhancedArbitrageDashboard />
+      
+      {/* Live Flash Loan Opportunities */}
       <LiveFlashLoanOpportunities />
       
       {/* Regular Arbitrage Opportunities */}
