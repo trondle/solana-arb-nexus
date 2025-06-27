@@ -100,11 +100,11 @@ const EnhancedArbitrageDashboard = () => {
   };
 
   const renderOpportunityCard = (opp: any, index: number) => {
-    const netProfit = safeNumber(opp.netProfit, 0);
-    const estimatedProfit = safeNumber(opp.estimatedProfit, 0);
+    const netProfit = safeNumber(opp.netProfit || opp.profit || opp.estimatedProfit, 0);
+    const estimatedProfit = safeNumber(opp.estimatedProfit || opp.profit || opp.netProfit, 0);
     const confidence = safeNumber(opp.confidence, 85);
     const priority = safeNumber(opp.priority, 75);
-    const executionTime = safeNumber(opp.executionPlan?.estimatedExecutionTime, 3000);
+    const executionTime = safeNumber(opp.executionPlan?.estimatedExecutionTime || opp.executionTime, 3000);
     const successRate = safeNumber(opp.executionPlan?.estimatedSuccessRate, 95);
     const feeSavings = safeNumber(opp.feeOptimization?.savings, 0);
 
@@ -118,17 +118,17 @@ const EnhancedArbitrageDashboard = () => {
             </Badge>
             <div>
               <div className="font-semibold">
-                {opp.type === 'bridge' ? `${opp.data.token} Bridge Arbitrage` :
-                 opp.type === 'multihop' ? `${opp.data.hops || 3}-Hop Cross-Chain` :
-                 opp.type === 'triangle' ? `${opp.data.tokenA || 'ETH'}→${opp.data.tokenB || 'USDC'}→${opp.data.tokenC || 'SOL'}` :
-                 opp.type === 'yield' ? `${opp.data.protocol} Yield + Arbitrage` :
+                {opp.type === 'bridge' ? `${opp.data?.token || opp.token || 'ETH'} Bridge Arbitrage` :
+                 opp.type === 'multihop' ? `${opp.data?.hops || opp.hops || 3}-Hop Cross-Chain` :
+                 opp.type === 'triangle' ? `${opp.data?.tokenA || opp.tokenA || 'ETH'}→${opp.data?.tokenB || opp.tokenB || 'USDC'}→${opp.data?.tokenC || opp.tokenC || 'SOL'}` :
+                 opp.type === 'yield' ? `${opp.data?.protocol || 'DeFi'} Yield + Arbitrage` :
                  'Flash Loan Arbitrage'}
               </div>
               <div className="text-sm text-muted-foreground">
-                {opp.type === 'bridge' ? `${opp.data.fromChain} → ${opp.data.toChain}` :
-                 opp.type === 'multihop' ? (opp.data.chains || ['solana', 'base', 'fantom']).join(' → ') :
-                 opp.type === 'triangle' ? `${opp.data.chain || 'solana'} • ${(opp.data.dexes || ['Jupiter', 'Raydium']).join(', ')}` :
-                 opp.type === 'yield' ? `${opp.data.chain || 'solana'} • ${safeNumber(opp.data.combinedYield, 12).toFixed(1)}% APY` :
+                {opp.type === 'bridge' ? `${opp.data?.fromChain || opp.fromChain || 'ethereum'} → ${opp.data?.toChain || opp.toChain || 'base'}` :
+                 opp.type === 'multihop' ? (opp.data?.chains || opp.chains || ['solana', 'base', 'fantom']).join(' → ') :
+                 opp.type === 'triangle' ? `${opp.data?.chain || opp.chain || 'solana'} • ${(opp.data?.dexes || opp.dexes || ['Jupiter', 'Raydium']).join(', ')}` :
+                 opp.type === 'yield' ? `${opp.data?.chain || opp.chain || 'solana'} • ${safeNumber(opp.data?.combinedYield, 12).toFixed(1)}% APY` :
                  'Cross-chain flash loan opportunity'}
               </div>
             </div>
@@ -324,7 +324,7 @@ const EnhancedArbitrageDashboard = () => {
             
             <TabsContent value="all" className="space-y-4">
               {opportunities.slice(0, 10).map((opp, index) => renderOpportunityCard(opp, index))}
-            </TabContent>
+            </TabsContent>
 
             {/* Individual type tabs with flash loan execution */}
             {['bridge', 'multihop', 'triangle', 'yield'].map(type => (
