@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   Wallet, 
   Plus, 
@@ -15,13 +17,17 @@ import {
   TrendingUp,
   Shield,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  QrCode
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useWallet } from '@/hooks/useWallet';
 
 const WalletDashboard = () => {
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
   const { toast } = useToast();
   
   const { 
@@ -31,6 +37,8 @@ const WalletDashboard = () => {
     chainId, 
     connectWallet, 
     disconnectWallet,
+    deposit,
+    withdraw,
     loading 
   } = useWallet();
 
@@ -71,6 +79,68 @@ const WalletDashboard = () => {
     return `${explorer}/address/${address}`;
   };
 
+  const handleDeposit = async () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid deposit amount",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await deposit(depositAmount, 'ETH');
+      setDepositAmount('');
+      toast({
+        title: "Deposit Initiated",
+        description: `Deposit of ${depositAmount} initiated successfully`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Deposit Failed",
+        description: error.message || "Failed to process deposit",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid withdrawal amount",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!withdrawAddress || withdrawAddress.length < 42) {
+      toast({
+        title: "Invalid Address",
+        description: "Please enter a valid withdrawal address",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await withdraw(withdrawAmount, 'ETH', withdrawAddress);
+      setWithdrawAmount('');
+      setWithdrawAddress('');
+      toast({
+        title: "Withdrawal Initiated",
+        description: `Withdrawal of ${withdrawAmount} initiated successfully`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Withdrawal Failed",
+        description: error.message || "Failed to process withdrawal",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!isConnected) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -88,9 +158,19 @@ const WalletDashboard = () => {
               <p className="text-muted-foreground mb-6">
                 Connect MetaMask to access low-fee cryptocurrencies and flash loan arbitrage
               </p>
+              
+              {typeof window !== 'undefined' && !window.ethereum && (
+                <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                  <AlertCircle className="w-4 h-4 text-red-600 mx-auto mb-2" />
+                  <p className="text-red-700 text-sm">
+                    MetaMask not detected. Please install MetaMask extension first.
+                  </p>
+                </div>
+              )}
+              
               <Button 
                 onClick={connectWallet}
-                disabled={loading}
+                disabled={loading || (typeof window !== 'undefined' && !window.ethereum)}
                 size="lg"
                 className="bg-blue-500 hover:bg-blue-600"
               >
@@ -226,6 +306,117 @@ const WalletDashboard = () => {
               </Button>
               <div className="text-xs text-muted-foreground text-center mt-2">
                 Low-fee networks supported
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Deposit Address Display */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="w-5 h-5" />
+            Your Deposit Address
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="text-sm text-muted-foreground mb-2">Send funds to this address:</div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 p-2 bg-white border rounded text-sm font-mono">
+                  {address || 'Connect wallet to see address'}
+                </code>
+                {address && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => copyAddress(address)}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                Only send {getChainName(chainId)} network tokens to this address
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="depositAmount">Deposit Amount</Label>
+                <Input
+                  id="depositAmount"
+                  type="number"
+                  placeholder="0.0"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  step="0.001"
+                  min="0"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button 
+                  onClick={handleDeposit}
+                  disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0}
+                  className="w-full"
+                >
+                  {loading ? 'Processing...' : 'Confirm Deposit'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Withdraw Address Input */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Minus className="w-5 h-5" />
+            Withdraw Funds
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="withdrawAddress">Withdrawal Address</Label>
+                <Input
+                  id="withdrawAddress"
+                  placeholder="0x..."
+                  value={withdrawAddress}
+                  onChange={(e) => setWithdrawAddress(e.target.value)}
+                />
+                <div className="text-xs text-muted-foreground">
+                  Enter the wallet address where you want to receive funds
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="withdrawAmount">Withdrawal Amount</Label>
+                  <Input
+                    id="withdrawAmount"
+                    type="number"
+                    placeholder="0.0"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    step="0.001"
+                    min="0"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    onClick={handleWithdraw}
+                    disabled={loading || !withdrawAmount || !withdrawAddress || parseFloat(withdrawAmount) <= 0}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {loading ? 'Processing...' : 'Initiate Withdrawal'}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

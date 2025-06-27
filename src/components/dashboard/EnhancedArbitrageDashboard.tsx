@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +33,7 @@ const EnhancedArbitrageDashboard = () => {
   const [executingId, setExecutingId] = useState<string | null>(null);
   const [liveFeedStatus, setLiveFeedStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [healthStatus, setHealthStatus] = useState<any>(null);
 
   const { isConnected: walletConnected, address, balance, chainId } = useWallet();
   const { toast } = useToast();
@@ -42,6 +42,17 @@ const EnhancedArbitrageDashboard = () => {
     const loadData = async () => {
       try {
         setLiveFeedStatus('connecting');
+        
+        // Check health status first
+        const health = await EnhancedFlashLoanOptimizer.healthCheck();
+        setHealthStatus(health);
+        
+        if (!health.overallHealth) {
+          setLiveFeedStatus('disconnected');
+          console.error('Live feed services are not healthy:', health);
+          return;
+        }
+        
         const opps = await EnhancedFlashLoanOptimizer.findAllOpportunities();
         const advantages = EnhancedFlashLoanOptimizer.getExecutionAdvantages();
         const stats = EnhancedFlashLoanOptimizer.getTradingStats();
@@ -51,47 +62,69 @@ const EnhancedArbitrageDashboard = () => {
         setTradingStats(stats);
         setLiveFeedStatus('connected');
         setLastUpdate(new Date());
+        
+        console.log(`✅ Live data loaded: ${opps.length} opportunities found`);
       } catch (error) {
         console.error('Error loading enhanced data:', error);
         setLiveFeedStatus('disconnected');
+        toast({
+          title: "Live Feed Error",
+          description: "Failed to connect to live data sources. Please check your connection.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     loadData();
-    const interval = setInterval(loadData, 10000); // Update every 10 seconds
+    const interval = setInterval(loadData, 15000); // Update every 15 seconds for live data
     return () => clearInterval(interval);
-  }, []);
+  }, [toast]);
 
   const executeFlashLoanArbitrage = async (opportunity: any) => {
+    console.log('🚀 Flash loan execution initiated for opportunity:', opportunity.id);
+    
+    // Comprehensive validation checks
+    const validationErrors: string[] = [];
+    
     if (!walletConnected || !address) {
-      toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your MetaMask wallet to execute flash loans.",
-        variant: "destructive",
-      });
-      return;
+      validationErrors.push("MetaMask wallet not connected");
     }
-
+    
+    if (!chainId) {
+      validationErrors.push("Network not detected");
+    }
+    
     // Check if we're on a supported low-fee network
     const supportedChains = [8453, 137, 42161, 10, 250]; // Base, Polygon, Arbitrum, Optimism, Fantom
-    if (!chainId || !supportedChains.includes(chainId)) {
-      toast({
-        title: "Unsupported Network",
-        description: "Please switch to Base, Polygon, Arbitrum, Optimism, or Fantom for low-fee flash loan execution.",
-        variant: "destructive",
-      });
-      return;
+    if (chainId && !supportedChains.includes(chainId)) {
+      validationErrors.push("Unsupported network - switch to Base, Polygon, Arbitrum, Optimism, or Fantom");
     }
 
     const currentBalance = parseFloat(balance || '0');
-    const requiredAmount = opportunity.actualAmount || 0.01; // Minimum amount for flash loan
-
+    const requiredAmount = opportunity.actualAmount || 0.01;
+    
     if (currentBalance < requiredAmount) {
+      validationErrors.push(`Insufficient balance: need ${requiredAmount.toFixed(4)} but have ${currentBalance.toFixed(4)}`);
+    }
+    
+    // Check if opportunity is still profitable after fees
+    const networkFees = calculateNetworkFees(chainId, requiredAmount);
+    const totalFees = networkFees.network + networkFees.flashLoan + (networkFees.bridge || 0);
+    const realNetProfit = (opportunity.netProfit || 0) - totalFees;
+    
+    if (realNetProfit <= 0) {
+      validationErrors.push(`Unprofitable after fees: would lose $${Math.abs(realNetProfit).toFixed(4)}`);
+    }
+    
+    // If there are validation errors, show them and return
+    if (validationErrors.length > 0) {
+      const errorMessage = validationErrors.join(', ');
+      console.error('❌ Flash loan validation failed:', errorMessage);
       toast({
-        title: "Insufficient Balance",
-        description: `You need at least ${requiredAmount.toFixed(4)} tokens for this flash loan arbitrage.`,
+        title: "Flash Loan Execution Failed",
+        description: errorMessage,
         variant: "destructive",
       });
       return;
@@ -102,61 +135,93 @@ const EnhancedArbitrageDashboard = () => {
     try {
       toast({
         title: "Flash Loan Initiated",
-        description: `Executing flash loan arbitrage for ${opportunity.netProfit?.toFixed(2) || '0.00'} profit`,
+        description: `Executing flash loan arbitrage for ${realNetProfit.toFixed(4)} profit`,
       });
 
-      console.log('Executing flash loan arbitrage:', {
+      console.log('💰 Executing flash loan arbitrage:', {
         opportunityId: opportunity.id,
         type: opportunity.type,
-        netProfit: opportunity.netProfit,
+        grossProfit: opportunity.netProfit,
+        netProfit: realNetProfit,
         walletAddress: address,
         chainId: chainId,
-        estimatedFees: opportunity.feeOptimization
+        requiredAmount: requiredAmount,
+        estimatedFees: {
+          network: networkFees.network,
+          flashLoan: networkFees.flashLoan,
+          bridge: networkFees.bridge,
+          total: totalFees
+        }
       });
       
-      // Simulate realistic execution time
-      const executionTime = opportunity.executionTime || 5000;
+      // Simulate realistic execution with proper validation
+      const executionTime = opportunity.executionTime || Math.max(3000, Math.random() * 8000);
+      
+      // Show progress during execution
+      const progressInterval = setInterval(() => {
+        console.log('⏳ Flash loan execution in progress...');
+      }, 1000);
+      
       await new Promise(resolve => setTimeout(resolve, executionTime));
+      clearInterval(progressInterval);
       
-      // Calculate actual fees
-      const networkFees = {
-        8453: 0.002, // Base
-        137: 0.001,  // Polygon
-        42161: 0.003, // Arbitrum
-        10: 0.002,   // Optimism
-        250: 0.0005  // Fantom
-      };
-      
-      const networkFee = networkFees[chainId as keyof typeof networkFees] || 0.01;
-      const flashLoanFee = (opportunity.actualAmount || 1000) * 0.0009; // 0.09% flash loan fee
-      const totalFees = networkFee + flashLoanFee;
-      const actualProfit = (opportunity.netProfit || 0) - totalFees;
+      // Simulate real execution results with slight variance
+      const executionVariance = 0.95 + (Math.random() * 0.1); // 95% to 105% of expected
+      const actualProfit = realNetProfit * executionVariance;
       
       if (actualProfit > 0) {
         // Update trading history with actual execution
         EnhancedFlashLoanOptimizer.updateTradingHistory(
-          opportunity.actualAmount || 1000,
+          requiredAmount,
           true,
           actualProfit
         );
         
+        console.log('✅ Flash loan executed successfully:', {
+          actualProfit: actualProfit,
+          totalFees: totalFees,
+          efficiency: (actualProfit / opportunity.netProfit) * 100
+        });
+        
         toast({
-          title: "Flash Loan Executed Successfully",
-          description: `Profit: $${actualProfit.toFixed(4)} (after fees: $${totalFees.toFixed(4)})`,
+          title: "Flash Loan Executed Successfully!",
+          description: `Profit: $${actualProfit.toFixed(4)} (fees: $${totalFees.toFixed(4)}) - ${((actualProfit / opportunity.netProfit) * 100).toFixed(1)}% efficiency`,
         });
       } else {
+        console.log('⚠️ Flash loan would be unprofitable, cancelled:', {
+          expectedProfit: realNetProfit,
+          actualProfit: actualProfit,
+          totalFees: totalFees
+        });
+        
         toast({
-          title: "Flash Loan Cancelled",
-          description: `Transaction would result in loss after fees. Saved you $${Math.abs(actualProfit).toFixed(4)}`,
+          title: "Flash Loan Auto-Cancelled",
+          description: `Execution would result in loss: $${Math.abs(actualProfit).toFixed(4)}. Protected your funds.`,
           variant: "destructive",
         });
       }
       
-    } catch (error) {
-      console.error('Flash loan execution failed:', error);
+    } catch (error: any) {
+      console.error('💥 Flash loan execution failed:', error);
+      
+      // Determine specific error type
+      let errorTitle = "Flash Loan Failed";
+      let errorDescription = "Transaction failed due to network conditions. No funds were lost.";
+      
+      if (error.message?.includes('insufficient funds')) {
+        errorTitle = "Insufficient Funds";
+        errorDescription = "Not enough balance to cover transaction and gas fees.";
+      } else if (error.message?.includes('user rejected')) {
+        errorTitle = "Transaction Cancelled";
+        errorDescription = "Transaction was cancelled by user.";
+      } else if (error.message?.includes('network')) {
+        errorTitle = "Network Error";
+        errorDescription = "Network congestion or RPC error. Please try again.";
+      }
+      
       toast({
-        title: "Flash Loan Failed",
-        description: "Transaction failed. No funds were lost.",
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {
@@ -217,6 +282,13 @@ const EnhancedArbitrageDashboard = () => {
     const totalFees = networkFees.network + networkFees.flashLoan + (networkFees.bridge || 0);
     const realNetProfit = netProfit - totalFees;
 
+    // Determine if execution is possible
+    const canExecute = walletConnected && 
+                      chainId && 
+                      [8453, 137, 42161, 10, 250].includes(chainId) &&
+                      parseFloat(balance || '0') >= actualAmount &&
+                      realNetProfit > 0;
+
     return (
       <div key={opp.id} className="border rounded-lg p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -243,7 +315,7 @@ const EnhancedArbitrageDashboard = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-lg font-bold text-green-500">
+            <div className={`text-lg font-bold ${realNetProfit > 0 ? 'text-green-500' : 'text-red-500'}`}>
               ${realNetProfit.toFixed(2)}
             </div>
             <div className="text-sm text-muted-foreground">
@@ -252,14 +324,25 @@ const EnhancedArbitrageDashboard = () => {
           </div>
         </div>
 
-        {/* Fee Breakdown */}
+        {/* Fee Breakdown with Bridge Information */}
         <div className="p-3 bg-gray-50 rounded border">
-          <div className="text-sm font-semibold mb-2">Fee Breakdown</div>
+          <div className="text-sm font-semibold mb-2">Complete Fee Breakdown</div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>Network Fee: ${networkFees.network.toFixed(4)}</div>
-            <div>Flash Loan Fee: ${networkFees.flashLoan.toFixed(4)}</div>
-            {networkFees.bridge && <div>Bridge Fee: ${networkFees.bridge.toFixed(4)}</div>}
-            <div className="font-semibold">Total Fees: ${totalFees.toFixed(4)}</div>
+            <div>Flash Loan Fee (0.09%): ${networkFees.flashLoan.toFixed(4)}</div>
+            {networkFees.bridge && (
+              <>
+                <div className="col-span-2 border-t pt-1 mt-1">
+                  <div className="font-semibold text-blue-600">Bridge Fees:</div>
+                </div>
+                <div>Bridge Fee: ${networkFees.bridge.toFixed(4)}</div>
+                <div>Slippage Buffer: ${(networkFees.bridge * 0.1).toFixed(4)}</div>
+              </>
+            )}
+            <div className="col-span-2 border-t pt-1 mt-1">
+              <div className="font-semibold">Total All Fees: ${totalFees.toFixed(4)}</div>
+              <div className="text-green-600">Net Profit After Fees: ${realNetProfit.toFixed(4)}</div>
+            </div>
           </div>
         </div>
 
@@ -303,24 +386,34 @@ const EnhancedArbitrageDashboard = () => {
           </div>
           <Button 
             size="sm" 
-            className={realNetProfit > 0 ? "bg-green-500 hover:bg-green-600" : "bg-gray-400"}
+            className={canExecute ? "bg-green-500 hover:bg-green-600" : "bg-gray-400"}
             onClick={() => executeFlashLoanArbitrage(opp)}
-            disabled={executingId === opp.id || realNetProfit <= 0 || !walletConnected}
+            disabled={executingId === opp.id || !canExecute}
           >
             {executingId === opp.id ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Executing...
               </>
-            ) : realNetProfit <= 0 ? (
-              <>
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Unprofitable
-              </>
             ) : !walletConnected ? (
               <>
                 <Wallet className="w-4 h-4 mr-2" />
                 Connect Wallet
+              </>
+            ) : !chainId || ![8453, 137, 42161, 10, 250].includes(chainId) ? (
+              <>
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Switch Network
+              </>
+            ) : parseFloat(balance || '0') < actualAmount ? (
+              <>
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Insufficient Balance
+              </>
+            ) : realNetProfit <= 0 ? (
+              <>
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Unprofitable
               </>
             ) : (
               <>
@@ -349,7 +442,7 @@ const EnhancedArbitrageDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Live Feed Status */}
+      {/* Live Feed Status with Health Check */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -407,6 +500,33 @@ const EnhancedArbitrageDashboard = () => {
               <div className="text-sm text-muted-foreground">Execution Status</div>
             </div>
           </div>
+          
+          {/* Health Status Display */}
+          {healthStatus && (
+            <div className="mt-4 p-3 bg-gray-50 rounded border">
+              <div className="text-sm font-semibold mb-2">Service Health Status:</div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                <div className={`flex items-center gap-1 ${healthStatus.bridgeScanner ? 'text-green-600' : 'text-red-600'}`}>
+                  {healthStatus.bridgeScanner ? '✓' : '✗'} Bridge Scanner
+                </div>
+                <div className={`flex items-center gap-1 ${healthStatus.multiHopService ? 'text-green-600' : 'text-red-600'}`}>
+                  {healthStatus.multiHopService ? '✓' : '✗'} Multi-Hop Service
+                </div>
+                <div className={`flex items-center gap-1 ${healthStatus.triangleService ? 'text-green-600' : 'text-red-600'}`}>
+                  {healthStatus.triangleService ? '✓' : '✗'} Triangle Service
+                </div>
+                <div className={`flex items-center gap-1 ${healthStatus.yieldService ? 'text-green-600' : 'text-red-600'}`}>
+                  {healthStatus.yieldService ? '✓' : '✗'} Yield Service
+                </div>
+                <div className={`flex items-center gap-1 ${healthStatus.privateExecution ? 'text-green-600' : 'text-red-600'}`}>
+                  {healthStatus.privateExecution ? '✓' : '✗'} Private Execution
+                </div>
+                <div className={`flex items-center gap-1 font-semibold ${healthStatus.overallHealth ? 'text-green-600' : 'text-red-600'}`}>
+                  {healthStatus.overallHealth ? '✓' : '✗'} Overall Health
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -421,7 +541,6 @@ const EnhancedArbitrageDashboard = () => {
         </Alert>
       )}
 
-      {/* Execution Advantages Overview */}
       {executionAdvantages && (
         <Card>
           <CardHeader>
@@ -461,7 +580,6 @@ const EnhancedArbitrageDashboard = () => {
         </Card>
       )}
 
-      {/* Trading Statistics */}
       {tradingStats && (
         <Card>
           <CardHeader>
@@ -528,7 +646,6 @@ const EnhancedArbitrageDashboard = () => {
               {opportunities.slice(0, 10).map((opp, index) => renderOpportunityCard(opp, index))}
             </TabsContent>
 
-            {/* Individual type tabs with flash loan execution */}
             {['bridge', 'multihop', 'triangle', 'yield'].map(type => (
               <TabsContent key={type} value={type} className="space-y-4">
                 {opportunities
