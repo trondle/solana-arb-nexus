@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { ethers } from 'ethers';
 import { supabase } from '@/integrations/supabase/client';
@@ -164,61 +165,86 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deposit = async (amount: string, tokenSymbol: string = 'ETH') => {
-    if (!isConnected || !address || !user || !window.ethereum) return;
+    if (!isConnected || !address || !user || !window.ethereum) {
+      toast({
+        title: "Wallet Error",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      // For ETH deposits, send to a deposit address (in a real app, this would be your platform's address)
+      // Validate amount
+      const depositAmount = parseFloat(amount);
+      if (isNaN(depositAmount) || depositAmount <= 0) {
+        throw new Error('Invalid deposit amount');
+      }
+
+      // Check balance
+      const currentBalance = parseFloat(balance || '0');
+      if (depositAmount > currentBalance) {
+        throw new Error('Insufficient balance for deposit');
+      }
+
+      // For demo purposes, we'll use a test deposit address
       const depositAddress = "0x742d35Cc6C4D7FAF6B8eAc95C16d73De14b74db0"; // Example address
       
       const tx = await signer.sendTransaction({
         to: depositAddress,
-        value: ethers.parseEther(amount)
-      });
-
-      // Save transaction to database
-      await supabase
-        .from('crypto_transactions')
-        .insert({
-          user_id: user.id,
-          wallet_address: address,
-          transaction_hash: tx.hash,
-          transaction_type: 'deposit',
-          chain_name: getChainName(chainId!),
-          token_symbol: tokenSymbol,
-          amount: parseFloat(amount),
-          status: 'pending',
-          from_address: address,
-          to_address: depositAddress
-        });
-
-      await logAction('crypto_deposit_initiated', { 
-        amount, 
-        token: tokenSymbol, 
-        tx_hash: tx.hash 
+        value: ethers.parseEther(amount),
+        gasLimit: 21000
       });
 
       toast({
         title: "Deposit Initiated",
-        description: `Depositing ${amount} ${tokenSymbol}. Transaction: ${tx.hash.slice(0, 10)}...`,
+        description: `Depositing ${amount} ${tokenSymbol}. TX: ${tx.hash.slice(0, 10)}...`,
       });
+
+      // Save transaction to database
+      if (user) {
+        await supabase
+          .from('crypto_transactions')
+          .insert({
+            user_id: user.id,
+            wallet_address: address,
+            transaction_hash: tx.hash,
+            transaction_type: 'deposit',
+            chain_name: getChainName(chainId!),
+            token_symbol: tokenSymbol,
+            amount: depositAmount,
+            status: 'pending',
+            from_address: address,
+            to_address: depositAddress
+          });
+
+        await logAction('crypto_deposit_initiated', { 
+          amount: depositAmount, 
+          token: tokenSymbol, 
+          tx_hash: tx.hash 
+        });
+      }
 
       // Wait for confirmation
       const receipt = await tx.wait();
       
       if (receipt) {
-        await supabase
-          .from('crypto_transactions')
-          .update({
-            status: 'confirmed',
-            confirmed_at: new Date().toISOString(),
-            block_number: receipt.blockNumber,
-            gas_fee: parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice))
-          })
-          .eq('transaction_hash', tx.hash);
+        // Update transaction status
+        if (user) {
+          await supabase
+            .from('crypto_transactions')
+            .update({
+              status: 'confirmed',
+              confirmed_at: new Date().toISOString(),
+              block_number: receipt.blockNumber,
+              gas_fee: parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice))
+            })
+            .eq('transaction_hash', tx.hash);
+        }
 
         await updateBalance(address);
         
@@ -227,11 +253,11 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           description: `Successfully deposited ${amount} ${tokenSymbol}`,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Deposit error:', error);
       toast({
         title: "Deposit Failed",
-        description: "Failed to process deposit. Please try again.",
+        description: error.message || "Failed to process deposit. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -240,13 +266,30 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const withdraw = async (amount: string, tokenSymbol: string = 'ETH', toAddress: string) => {
-    if (!isConnected || !address || !user) return;
+    if (!isConnected || !address || !user) {
+      toast({
+        title: "Wallet Error",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
       
+      // Validate inputs
+      const withdrawAmount = parseFloat(amount);
+      if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+        throw new Error('Invalid withdrawal amount');
+      }
+
+      if (!toAddress || !ethers.isAddress(toAddress)) {
+        throw new Error('Invalid withdrawal address');
+      }
+
       // In a real application, this would trigger a withdrawal from your platform's hot wallet
-      // For now, we'll just record the withdrawal request
+      // For demo purposes, we'll just record the withdrawal request
       await supabase
         .from('crypto_transactions')
         .insert({
@@ -255,14 +298,14 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           transaction_type: 'withdrawal',
           chain_name: getChainName(chainId!),
           token_symbol: tokenSymbol,
-          amount: parseFloat(amount),
+          amount: withdrawAmount,
           status: 'pending',
-          from_address: 'platform_wallet', // Your platform's address
+          from_address: address, // Platform's address would go here
           to_address: toAddress
         });
 
       await logAction('crypto_withdrawal_requested', { 
-        amount, 
+        amount: withdrawAmount, 
         token: tokenSymbol, 
         to_address: toAddress 
       });
@@ -271,11 +314,11 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         title: "Withdrawal Requested",
         description: `Withdrawal of ${amount} ${tokenSymbol} has been submitted for processing.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Withdrawal error:', error);
       toast({
         title: "Withdrawal Failed",
-        description: "Failed to process withdrawal request.",
+        description: error.message || "Failed to process withdrawal request.",
         variant: "destructive",
       });
     } finally {
@@ -296,6 +339,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         toast({
           title: "Network not found",
           description: "Please add this network to MetaMask manually.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Network Switch Failed",
+          description: "Failed to switch network. Please try manually.",
           variant: "destructive",
         });
       }
