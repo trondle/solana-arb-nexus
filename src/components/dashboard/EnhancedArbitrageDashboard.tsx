@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Wifi,
-  WifiOff
+  WifiOff,
+  Wallet
 } from 'lucide-react';
 import { EnhancedFlashLoanOptimizer } from '../../utils/enhancedFlashLoanOptimizer';
 import { useWallet } from '@/hooks/useWallet';
