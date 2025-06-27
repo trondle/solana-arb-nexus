@@ -12,11 +12,20 @@ export interface MultiHopRoute {
   hops: number;
 }
 
+interface RouteData {
+  path: string[];
+  tokens: string[];
+  chains: string[];
+}
+
+type ChainPrices = Record<string, number>;
+type PriceData = Record<string, ChainPrices>;
+
 export class MultiHopArbitrage {
   private static chains = ['solana', 'base', 'fantom'];
   private static tokens = ['SOL', 'ETH', 'USDC', 'FTM', 'USDT'];
   
-  private static prices = {
+  private static prices: PriceData = {
     'solana': { 'SOL': 98.50, 'ETH': 2420.5, 'USDC': 1.0001, 'FTM': 0.4522, 'USDT': 1.0002 },
     'base': { 'SOL': 98.45, 'ETH': 2419.8, 'USDC': 0.9999, 'FTM': 0.4519, 'USDT': 0.9998 },
     'fantom': { 'SOL': 98.52, 'ETH': 2421.2, 'USDC': 1.0002, 'FTM': 0.4520, 'USDT': 1.0001 }
@@ -54,8 +63,8 @@ export class MultiHopArbitrage {
     return opportunities.sort((a, b) => b.netProfit - a.netProfit).slice(0, 15);
   }
 
-  private static generateRoutes(startChain: string, startToken: string, maxHops: number) {
-    const routes: any[] = [];
+  private static generateRoutes(startChain: string, startToken: string, maxHops: number): RouteData[] {
+    const routes: RouteData[] = [];
     
     // 3-hop route: Chain A -> Chain B -> Chain C -> Chain A
     this.chains.forEach(midChain => {
@@ -80,7 +89,7 @@ export class MultiHopArbitrage {
     return routes;
   }
 
-  private static calculateRouteProfit(route: any) {
+  private static calculateRouteProfit(route: RouteData) {
     let currentAmount = 10000; // Start with $10k
     let totalFees = 0;
     
@@ -90,9 +99,16 @@ export class MultiHopArbitrage {
       const fromToken = route.tokens[i];
       const toToken = route.tokens[i + 1];
       
-      // Get prices
-      const fromPrice = this.prices[fromChain as keyof typeof this.prices][fromToken as keyof typeof this.prices[typeof fromChain]];
-      const toPrice = this.prices[toChain as keyof typeof this.prices][toToken as keyof typeof this.prices[typeof toChain]];
+      // Get prices with type safety
+      const fromChainPrices = this.prices[fromChain];
+      const toChainPrices = this.prices[toChain];
+      
+      if (!fromChainPrices || !toChainPrices) continue;
+      
+      const fromPrice = fromChainPrices[fromToken];
+      const toPrice = toChainPrices[toToken];
+      
+      if (!fromPrice || !toPrice) continue;
       
       // Calculate conversion
       const tokenAmount = currentAmount / fromPrice;

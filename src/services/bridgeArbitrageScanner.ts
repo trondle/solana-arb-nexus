@@ -13,8 +13,12 @@ export interface BridgeArbitrageOpportunity {
   confidence: number;
 }
 
+type BridgeRoutes = Record<string, number>;
+type BridgeTokens = Record<string, BridgeRoutes>;
+type BridgeData = Record<string, BridgeTokens>;
+
 export class BridgeArbitrageScanner {
-  private static bridgeData = {
+  private static bridgeData: BridgeData = {
     'Stargate': {
       'USDC': { 'base-fantom': 1.0002, 'fantom-base': 0.9998, 'solana-base': 1.0001 },
       'ETH': { 'base-fantom': 2420.5, 'fantom-base': 2419.8, 'solana-base': 2421.2 }
@@ -29,7 +33,7 @@ export class BridgeArbitrageScanner {
     }
   };
 
-  private static marketPrices = {
+  private static marketPrices: Record<string, number> = {
     'USDC': 1.0000,
     'ETH': 2420.0,
     'SOL': 98.50,
@@ -43,7 +47,8 @@ export class BridgeArbitrageScanner {
 
     Object.entries(this.bridgeData).forEach(([bridgeName, bridgeTokens]) => {
       Object.entries(bridgeTokens).forEach(([token, routes]) => {
-        const marketPrice = this.marketPrices[token as keyof typeof this.marketPrices];
+        const marketPrice = this.marketPrices[token];
+        if (!marketPrice) return;
         
         Object.entries(routes).forEach(([route, bridgePrice]) => {
           const [fromChain, toChain] = route.split('-');
@@ -77,13 +82,11 @@ export class BridgeArbitrageScanner {
 
   static updateBridgePrices() {
     // Simulate real-time price updates
-    Object.keys(this.bridgeData).forEach(bridge => {
-      Object.keys(this.bridgeData[bridge as keyof typeof this.bridgeData]).forEach(token => {
-        const routes = this.bridgeData[bridge as keyof typeof this.bridgeData][token as keyof typeof this.bridgeData[typeof bridge]];
-        Object.keys(routes).forEach(route => {
-          const currentPrice = routes[route as keyof typeof routes];
+    Object.entries(this.bridgeData).forEach(([bridgeName, bridgeTokens]) => {
+      Object.entries(bridgeTokens).forEach(([token, routes]) => {
+        Object.entries(routes).forEach(([route, currentPrice]) => {
           const variation = (Math.random() - 0.5) * 0.002; // ±0.1% variation
-          routes[route as keyof typeof routes] = currentPrice * (1 + variation);
+          routes[route] = currentPrice * (1 + variation);
         });
       });
     });
