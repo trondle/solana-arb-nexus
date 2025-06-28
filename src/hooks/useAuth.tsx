@@ -10,6 +10,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  logAction: (action: string, details?: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,6 +61,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const logAction = async (action: string, details?: any) => {
+    try {
+      if (user) {
+        await supabase.rpc('log_action', {
+          action_name: action,
+          details: details || {}
+        });
+      }
+    } catch (error) {
+      console.error('Error logging action:', error);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -82,7 +96,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, userRole, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, userRole, loading, signIn, signUp, signOut, logAction }}>
       {children}
     </AuthContext.Provider>
   );
@@ -99,6 +113,7 @@ export const useAuth = () => {
       signIn: async () => ({ error: null }),
       signUp: async () => ({ error: null }),
       signOut: async () => {},
+      logAction: async () => {},
     };
   }
   return context;

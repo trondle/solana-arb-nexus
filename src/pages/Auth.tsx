@@ -62,7 +62,7 @@ const Auth = () => {
       return;
     }
 
-    const { error } = await signUp(signUpEmail, signUpPassword, signUpFullName);
+    const { error } = await signUp(signUpEmail, signUpPassword);
     
     if (error) {
       setAuthError(error.message || 'Sign up failed');
