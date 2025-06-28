@@ -1,3 +1,4 @@
+
 import { LocalServiceAdapter } from './localServiceAdapter';
 
 interface LivePriceConfig {
@@ -29,18 +30,15 @@ export class LivePriceService {
   static setConfig(config: LivePriceConfig) {
     this.config = config;
     
-    // Configure LocalServiceAdapter if enabled
     if (config.localServiceConfig && config.enableLocalService) {
       LocalServiceAdapter.setConfig(config.localServiceConfig);
     }
     
-    console.log('LivePriceService: Configuration updated', Object.keys(config));
+    console.log('🔴 LIVE: LivePriceService configured for real trading');
   }
 
-  // Enhanced Jupiter price fetching for Solana
   static async getJupiterPrice(tokenSymbol: string): Promise<LiveTokenPrice | null> {
     try {
-      // Token mint addresses for popular tokens on Solana
       const tokenMints: Record<string, string> = {
         'SOL': 'So11111111111111111111111111111111111111112',
         'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -50,9 +48,16 @@ export class LivePriceService {
       };
 
       const mintAddress = tokenMints[tokenSymbol];
-      if (!mintAddress) return null;
+      if (!mintAddress) {
+        throw new Error(`No mint address for ${tokenSymbol}`);
+      }
 
       const response = await fetch(`https://price.jup.ag/v4/price?ids=${mintAddress}`);
+      
+      if (!response.ok) {
+        throw new Error(`Jupiter API error: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.data && data.data[mintAddress]) {
@@ -63,27 +68,26 @@ export class LivePriceService {
           change24h: priceData.priceChange24h || 0,
           volume24h: priceData.volume24h || 0,
           lastUpdated: Date.now(),
-          source: 'Jupiter'
+          source: 'Jupiter-LIVE'
         };
       }
-      return null;
+      
+      throw new Error(`No price data from Jupiter for ${tokenSymbol}`);
     } catch (error) {
-      console.error('Jupiter API error:', error);
-      return null;
+      console.error(`🚫 Jupiter LIVE fetch failed for ${tokenSymbol}:`, error);
+      throw error;
     }
   }
 
-  // Enhanced 1inch API for Base and Fantom
   static async get1inchPrice(chainId: number, tokenSymbol: string): Promise<LiveTokenPrice | null> {
     try {
-      // Token addresses for Base (chainId 8453) and Fantom (chainId 250)
       const tokenAddresses: Record<number, Record<string, string>> = {
-        8453: { // Base
+        8453: {
           'ETH': '0x0000000000000000000000000000000000000000',
           'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
           'USDT': '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
         },
-        250: { // Fantom
+        250: {
           'FTM': '0x0000000000000000000000000000000000000000',
           'USDC': '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75',
           'USDT': '0x049d68029688eAbF473097a2fC38ef61633A3C7A'
@@ -91,7 +95,9 @@ export class LivePriceService {
       };
 
       const tokenAddress = tokenAddresses[chainId]?.[tokenSymbol];
-      if (!tokenAddress) return null;
+      if (!tokenAddress) {
+        throw new Error(`No token address for ${tokenSymbol} on chain ${chainId}`);
+      }
 
       const url = `https://api.1inch.dev/price/v1.1/${chainId}/${tokenAddress}`;
       const headers: Record<string, string> = {
@@ -103,26 +109,31 @@ export class LivePriceService {
       }
 
       const response = await fetch(url, { headers });
+      
+      if (!response.ok) {
+        throw new Error(`1inch API error: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data[tokenAddress]) {
         return {
           symbol: tokenSymbol,
           price: parseFloat(data[tokenAddress]),
-          change24h: 0, // 1inch doesn't provide 24h change in price endpoint
+          change24h: 0,
           volume24h: 0,
           lastUpdated: Date.now(),
-          source: '1inch'
+          source: '1inch-LIVE'
         };
       }
-      return null;
+      
+      throw new Error(`No price data from 1inch for ${tokenSymbol}`);
     } catch (error) {
-      console.error('1inch API error:', error);
-      return null;
+      console.error(`🚫 1inch LIVE fetch failed for ${tokenSymbol}:`, error);
+      throw error;
     }
   }
 
-  // Enhanced CoinGecko for backup and additional data
   static async getCoinGeckoPrice(coinId: string): Promise<LiveTokenPrice | null> {
     try {
       const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true`;
@@ -135,8 +146,11 @@ export class LivePriceService {
       const response = await fetch(url, { headers });
       
       if (response.status === 429) {
-        console.warn('CoinGecko rate limit hit, using cached data');
-        return null;
+        throw new Error('CoinGecko rate limit exceeded');
+      }
+      
+      if (!response.ok) {
+        throw new Error(`CoinGecko API error: ${response.status}`);
       }
 
       const data = await response.json();
@@ -149,59 +163,59 @@ export class LivePriceService {
           change24h: priceData.usd_24h_change || 0,
           volume24h: priceData.usd_24h_vol || 0,
           lastUpdated: Date.now(),
-          source: 'CoinGecko'
+          source: 'CoinGecko-LIVE'
         };
       }
-      return null;
+      
+      throw new Error(`No price data from CoinGecko for ${coinId}`);
     } catch (error) {
-      console.error('CoinGecko API error:', error);
-      return null;
+      console.error(`🚫 CoinGecko LIVE fetch failed for ${coinId}:`, error);
+      throw error;
     }
   }
 
-  // Main aggregated price function with local service priority
   static async getAggregatedPrice(symbol: string, chainId?: number): Promise<LiveTokenPrice | null> {
     const cacheKey = `${symbol}-${chainId || 'all'}`;
     const cached = this.cache.get(cacheKey);
     
-    if (cached && Date.now() - cached.lastUpdated < 10000) { // 10 second cache
+    // Shorter cache for live trading
+    if (cached && Date.now() - cached.lastUpdated < 3000) {
       return cached;
     }
 
-    // Check if local service is enabled and try it first
+    // Try local service first if enabled
     if (LocalServiceAdapter.isEnabled()) {
       try {
         const localResult = await this.getLocalServicePrice(symbol, chainId);
         if (localResult) {
           this.cache.set(cacheKey, localResult);
-          console.log(`Price updated for ${symbol}: $${localResult.price} from local service`);
+          console.log(`🔴 LIVE LOCAL: ${symbol} = $${localResult.price}`);
           return localResult;
         }
       } catch (error) {
-        console.warn('Local service failed, falling back to external APIs:', error);
+        console.warn('🟡 Local service failed, trying external APIs:', error);
       }
     }
 
-    // Fall back to external APIs if local service is not available
+    // External API fallback - NO MOCK DATA
     const promises: Promise<LiveTokenPrice | null>[] = [];
 
-    // Enhanced token mappings for our focused chains
     const tokenMappings: Record<string, any> = {
       'SOL': {
         jupiter: true,
         coinGecko: 'solana'
       },
       'ETH': {
-        oneInch: [8453], // Base
+        oneInch: [8453],
         coinGecko: 'ethereum'
       },
       'FTM': {
-        oneInch: [250], // Fantom
+        oneInch: [250],
         coinGecko: 'fantom'
       },
       'USDC': {
         jupiter: true,
-        oneInch: [8453, 250], // Base and Fantom
+        oneInch: [8453, 250],
         coinGecko: 'usd-coin'
       },
       'USDT': {
@@ -213,124 +227,69 @@ export class LivePriceService {
 
     const mapping = tokenMappings[symbol];
     if (!mapping) {
-      console.warn(`No mapping found for ${symbol}`);
-      return null;
+      throw new Error(`🚫 LIVE: No API mapping for ${symbol} - cannot trade without live data`);
     }
 
-    // Try Jupiter for Solana tokens
+    // Add API calls based on mapping
     if (mapping.jupiter) {
       promises.push(this.getJupiterPrice(symbol));
     }
-
-    // Try 1inch for specific chains
-    if (mapping.oneInch && chainId && mapping.oneInch.includes(chainId)) {
-      promises.push(this.get1inchPrice(chainId, symbol));
+    
+    if (mapping.oneInch && Array.isArray(mapping.oneInch)) {
+      for (const chain of mapping.oneInch) {
+        if (!chainId || chainId === chain) {
+          promises.push(this.get1inchPrice(chain, symbol));
+        }
+      }
     }
-
-    // Try CoinGecko as reliable backup
+    
     if (mapping.coinGecko) {
       promises.push(this.getCoinGeckoPrice(mapping.coinGecko));
     }
 
+    if (promises.length === 0) {
+      throw new Error(`🚫 LIVE: No API sources available for ${symbol}`);
+    }
+
     try {
       const results = await Promise.allSettled(promises);
-      const successful = results
+      const successfulResults = results
         .filter((result): result is PromiseFulfilledResult<LiveTokenPrice> => 
           result.status === 'fulfilled' && result.value !== null
         )
         .map(result => result.value);
 
-      if (successful.length === 0) {
-        console.warn(`No successful price data for ${symbol}`);
-        return cached || null;
+      if (successfulResults.length === 0) {
+        throw new Error(`🚫 LIVE: All API sources failed for ${symbol}`);
       }
 
-      // Use the most recent and reliable result
-      const best = successful.reduce((prev, current) => {
-        // Prefer Jupiter for SOL, 1inch for ETH/FTM, CoinGecko as backup
-        if (symbol === 'SOL' && current.source === 'Jupiter') return current;
-        if ((symbol === 'ETH' || symbol === 'FTM') && current.source === '1inch') return current;
-        return current.lastUpdated > prev.lastUpdated ? current : prev;
-      });
+      // Use the first successful result
+      const price = successfulResults[0];
+      this.cache.set(cacheKey, price);
+      console.log(`🔴 LIVE: ${symbol} = $${price.price} from ${price.source}`);
+      return price;
 
-      this.cache.set(cacheKey, best);
-      console.log(`Price updated for ${symbol}: $${best.price} from ${best.source}`);
-      return best;
     } catch (error) {
-      console.error(`Error fetching price for ${symbol}:`, error);
-      return cached || null;
+      console.error(`🚫 LIVE TRADING ERROR: Failed to get aggregated price for ${symbol}:`, error);
+      throw error;
     }
   }
 
-  // New method to get price from local service
   private static async getLocalServicePrice(symbol: string, chainId?: number): Promise<LiveTokenPrice | null> {
-    try {
-      if (symbol === 'SOL') {
-        const solMint = 'So11111111111111111111111111111111111111112';
-        const prices = await LocalServiceAdapter.getSolanaPrice([solMint]);
-        return prices[0] || null;
-      }
-
-      if (chainId && (chainId === 8453 || chainId === 250)) {
-        // Base or Fantom
-        const tokenAddresses: Record<number, Record<string, string>> = {
-          8453: { // Base
-            'ETH': '0x0000000000000000000000000000000000000000',
-            'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-            'USDT': '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
-          },
-          250: { // Fantom
-            'FTM': '0x0000000000000000000000000000000000000000',
-            'USDC': '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75',
-            'USDT': '0x049d68029688eAbF473097a2fC38ef61633A3C7A'
-          }
-        };
-
-        const tokenAddress = tokenAddresses[chainId]?.[symbol];
-        if (tokenAddress) {
-          const prices = await LocalServiceAdapter.getEVMPrice(chainId, [tokenAddress]);
-          return prices[0] || null;
-        }
-      }
-
-      // Try market data endpoint as fallback
-      const coinIds = {
-        'SOL': 'solana',
-        'ETH': 'ethereum', 
-        'FTM': 'fantom',
-        'USDC': 'usd-coin',
-        'USDT': 'tether'
-      };
-
-      const coinId = coinIds[symbol as keyof typeof coinIds];
-      if (coinId) {
-        const prices = await LocalServiceAdapter.getSimplePrice([coinId]);
-        return prices[0] || null;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error fetching price from local service:', error);
-      return null;
-    }
+    return await LocalServiceAdapter.getPrice(symbol, chainId);
   }
 
-  // WebSocket connections for real-time data
   static connectToJupiterWebSocket(callback: (data: any) => void): WebSocket | null {
     try {
-      const ws = new WebSocket('wss://price.jup.ag/v4/stream');
+      const ws = new WebSocket('wss://api.mainnet-beta.solana.com/');
       
       ws.onopen = () => {
-        console.log('Connected to Jupiter WebSocket');
-        // Subscribe to SOL and USDC prices
+        console.log('🔴 LIVE: Jupiter WebSocket connected');
         ws.send(JSON.stringify({
-          method: 'subscribe',
-          params: {
-            tokens: [
-              'So11111111111111111111111111111111111111112', // SOL
-              'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'  // USDC
-            ]
-          }
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'accountSubscribe',
+          params: ['So11111111111111111111111111111111111111112']
         }));
       };
 
@@ -339,86 +298,27 @@ export class LivePriceService {
           const data = JSON.parse(event.data);
           callback(data);
         } catch (error) {
-          console.error('Error parsing Jupiter WebSocket data:', error);
+          console.error('WebSocket message parse error:', error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('Jupiter WebSocket error:', error);
-      };
-
-      ws.onclose = () => {
-        console.log('Jupiter WebSocket disconnected, attempting reconnect...');
-        // Auto-reconnect after 5 seconds
-        setTimeout(() => this.connectToJupiterWebSocket(callback), 5000);
+        console.error('🚫 LIVE WebSocket error:', error);
       };
 
       this.wsConnections.set('jupiter', ws);
       return ws;
     } catch (error) {
-      console.error('Failed to connect to Jupiter WebSocket:', error);
-      return null;
+      console.error('🚫 LIVE: Failed to connect Jupiter WebSocket:', error);
+      throw error;
     }
   }
 
-  static disconnectAll() {
-    this.wsConnections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
+  static disconnectAll(): void {
+    this.wsConnections.forEach((ws, key) => {
+      ws.close();
+      console.log(`🔴 LIVE: Disconnected ${key} WebSocket`);
     });
     this.wsConnections.clear();
-    console.log('All WebSocket connections closed');
-  }
-
-  // Enhanced health check including local service
-  static async healthCheck(): Promise<{ 
-    jupiter: boolean; 
-    oneInch: boolean; 
-    coinGecko: boolean; 
-    localService?: { solana: boolean; base: boolean; fantom: boolean; marketData: boolean }
-  }> {
-    const health = {
-      jupiter: false,
-      oneInch: false,
-      coinGecko: false
-    };
-
-    try {
-      // Test Jupiter
-      const jupiterResult = await this.getJupiterPrice('SOL');
-      health.jupiter = jupiterResult !== null;
-    } catch (e) {
-      console.error('Jupiter health check failed:', e);
-    }
-
-    try {
-      // Test 1inch (Base)
-      const oneInchResult = await this.get1inchPrice(8453, 'ETH');
-      health.oneInch = oneInchResult !== null;
-    } catch (e) {
-      console.error('1inch health check failed:', e);
-    }
-
-    try {
-      // Test CoinGecko
-      const coinGeckoResult = await this.getCoinGeckoPrice('solana');
-      health.coinGecko = coinGeckoResult !== null;
-    } catch (e) {
-      console.error('CoinGecko health check failed:', e);
-    }
-
-    // Test local service if enabled
-    if (LocalServiceAdapter.isEnabled()) {
-      try {
-        const localHealth = await LocalServiceAdapter.healthCheck();
-        (health as any).localService = localHealth;
-      } catch (e) {
-        console.error('Local service health check failed:', e);
-      }
-    }
-
-    console.log('API Health Check:', health);
-    return health;
   }
 }

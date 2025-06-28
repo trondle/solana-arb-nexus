@@ -1,4 +1,3 @@
-
 interface LiveFeedConfig {
   enableRemoteAccess: boolean;
   apiEndpoint: string;
@@ -36,9 +35,9 @@ interface ArbitrageOpportunity {
 
 export class LiveFeedApiService {
   private static config: LiveFeedConfig = {
-    enableRemoteAccess: false,
+    enableRemoteAccess: true, // Always enabled for live trading
     apiEndpoint: 'https://your-app.lovable.app/api/live-feed',
-    rateLimitPerMinute: 60
+    rateLimitPerMinute: 120 // Higher limit for live trading
   };
 
   private static requestCount = 0;
@@ -47,7 +46,7 @@ export class LiveFeedApiService {
   static configure(config: Partial<LiveFeedConfig>) {
     this.config = { ...this.config, ...config };
     localStorage.setItem('liveFeedConfig', JSON.stringify(this.config));
-    console.log('✅ Live Feed API configured for remote access:', this.config);
+    console.log('🔴 LIVE: Live Feed API configured for real trading:', this.config);
   }
 
   static getConfig(): LiveFeedConfig {
@@ -58,24 +57,21 @@ export class LiveFeedApiService {
     return this.config;
   }
 
-  // Rate limiting
   private static checkRateLimit(): boolean {
     const now = Date.now();
-    if (now - this.lastResetTime > 60000) { // Reset every minute
+    if (now - this.lastResetTime > 60000) {
       this.requestCount = 0;
       this.lastResetTime = now;
     }
     
     if (this.requestCount >= this.config.rateLimitPerMinute) {
-      console.warn('Rate limit exceeded. Please wait before making more requests.');
-      return false;
+      throw new Error('🚫 LIVE: Rate limit exceeded - cannot proceed with live trading');
     }
     
     this.requestCount++;
     return true;
   }
 
-  // Main API endpoint for live token prices
   static async getLivePrices(tokens: string[]): Promise<{
     success: boolean;
     data: LiveTokenData[];
@@ -83,32 +79,30 @@ export class LiveFeedApiService {
     rateLimitRemaining: number;
   }> {
     if (!this.checkRateLimit()) {
-      return {
-        success: false,
-        data: [],
-        timestamp: Date.now(),
-        rateLimitRemaining: this.config.rateLimitPerMinute - this.requestCount
-      };
+      throw new Error('Rate limit exceeded for live trading');
     }
 
     try {
-      // Generate live-like data (in production, this would fetch from real APIs)
+      console.log('🔴 LIVE: Fetching REAL prices for:', tokens);
+      
+      // Fetch REAL prices from multiple sources
       const data = await Promise.all(tokens.map(async (token) => {
-        // Simulate real price data with small variations
-        const basePrice = this.getBasePriceForToken(token);
-        const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
-        const price = basePrice * (1 + variation);
-
-        return {
-          symbol: token,
-          price: price,
-          change24h: (Math.random() - 0.5) * 10, // ±5% daily change
-          volume24h: Math.random() * 10000000, // Random volume
-          timestamp: Date.now(),
-          source: 'LiveFeedAPI',
-          chainId: this.getChainIdForToken(token)
-        };
+        try {
+          // Get real price from external APIs
+          const realPrice = await this.fetchRealPrice(token);
+          
+          if (!realPrice) {
+            throw new Error(`🚫 LIVE: Failed to get real price for ${token}`);
+          }
+          
+          return realPrice;
+        } catch (error) {
+          console.error(`🚫 LIVE: Error fetching ${token}:`, error);
+          throw error;
+        }
       }));
+
+      console.log(`🔴 LIVE: Successfully fetched ${data.length} real prices`);
 
       return {
         success: true,
@@ -117,101 +111,215 @@ export class LiveFeedApiService {
         rateLimitRemaining: this.config.rateLimitPerMinute - this.requestCount
       };
     } catch (error) {
-      console.error('Live Feed API error:', error);
-      return {
-        success: false,
-        data: [],
-        timestamp: Date.now(),
-        rateLimitRemaining: this.config.rateLimitPerMinute - this.requestCount
-      };
+      console.error('🚫 LIVE: Live Feed API error:', error);
+      throw error;
     }
   }
 
-  // Arbitrage opportunities endpoint
+  private static async fetchRealPrice(token: string): Promise<LiveTokenData> {
+    try {
+      // Try multiple real API sources
+      const sources = [
+        () => this.fetchFromBinance(token),
+        () => this.fetchFromCoinGecko(token),
+        () => this.fetchFromCoinbase(token)
+      ];
+
+      for (const source of sources) {
+        try {
+          const result = await source();
+          if (result) {
+            console.log(`🔴 LIVE: Got real price for ${token}: $${result.price}`);
+            return result;
+          }
+        } catch (error) {
+          console.warn(`🟡 LIVE: Source failed for ${token}, trying next...`);
+          continue;
+        }
+      }
+
+      throw new Error(`🚫 LIVE: All price sources failed for ${token}`);
+    } catch (error) {
+      console.error(`🚫 LIVE: fetchRealPrice failed for ${token}:`, error);
+      throw error;
+    }
+  }
+
+  private static async fetchFromBinance(token: string): Promise<LiveTokenData | null> {
+    const symbolMap: Record<string, string> = {
+      'SOL': 'SOLUSDT',
+      'ETH': 'ETHUSDT',
+      'USDC': 'USDCUSDT',
+      'USDT': 'USDTUSDT'
+    };
+
+    const binanceSymbol = symbolMap[token];
+    if (!binanceSymbol) return null;
+
+    const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSymbol}`);
+    
+    if (!response.ok) {
+      throw new Error(`Binance API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      symbol: token,
+      price: parseFloat(data.lastPrice),
+      change24h: parseFloat(data.priceChangePercent),
+      volume24h: parseFloat(data.volume),
+      timestamp: Date.now(),
+      source: 'Binance-LIVE'
+    };
+  }
+
+  private static async fetchFromCoinGecko(token: string): Promise<LiveTokenData | null> {
+    const coinMap: Record<string, string> = {
+      'SOL': 'solana',
+      'ETH': 'ethereum',
+      'USDC': 'usd-coin',
+      'USDT': 'tether'
+    };
+
+    const coinId = coinMap[token];
+    if (!coinId) return null;
+
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`CoinGecko API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data[coinId]) return null;
+    
+    return {
+      symbol: token,
+      price: data[coinId].usd,
+      change24h: data[coinId].usd_24h_change || 0,
+      volume24h: data[coinId].usd_24h_vol || 0,
+      timestamp: Date.now(),
+      source: 'CoinGecko-LIVE'
+    };
+  }
+
+  private static async fetchFromCoinbase(token: string): Promise<LiveTokenData | null> {
+    const response = await fetch(`https://api.coinbase.com/v2/exchange-rates?currency=${token}`);
+    
+    if (!response.ok) {
+      throw new Error(`Coinbase API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data?.rates?.USD) return null;
+    
+    return {
+      symbol: token,
+      price: parseFloat(data.data.rates.USD),
+      change24h: 0, // Coinbase doesn't provide 24h change in this endpoint
+      volume24h: 0,
+      timestamp: Date.now(),
+      source: 'Coinbase-LIVE'
+    };
+  }
+
   static async getArbitrageOpportunities(): Promise<{
     success: boolean;
     opportunities: ArbitrageOpportunity[];
     timestamp: number;
   }> {
     if (!this.checkRateLimit()) {
-      return {
-        success: false,
-        opportunities: [],
-        timestamp: Date.now()
-      };
+      throw new Error('Rate limit exceeded for live arbitrage opportunities');
     }
 
     try {
-      const opportunities: ArbitrageOpportunity[] = [];
+      console.log('🔴 LIVE: Calculating REAL arbitrage opportunities');
+
+      // Get real price data first
+      const priceResponse = await this.getLivePrices(['SOL', 'ETH', 'USDC', 'USDT']);
       
-      // Generate realistic arbitrage opportunities
-      const tokens = ['SOL', 'USDC', 'ETH', 'USDT'];
-      const dexes = {
-        solana: ['Jupiter', 'Raydium', 'Orca', 'Serum'],
-        base: ['Uniswap V3', 'SushiSwap', 'Curve'],
-        fantom: ['SpookySwap', 'SpiritSwap']
-      };
-
-      for (let i = 0; i < 8; i++) {
-        const tokenA = tokens[Math.floor(Math.random() * tokens.length)];
-        const tokenB = tokens[Math.floor(Math.random() * tokens.length)];
-        
-        if (tokenA !== tokenB) {
-          const chainA = [101, 8453, 250][Math.floor(Math.random() * 3)]; // Solana, Base, Fantom
-          const chainB = [101, 8453, 250][Math.floor(Math.random() * 3)];
-          
-          const priceA = this.getBasePriceForToken(tokenA) * (1 + (Math.random() - 0.5) * 0.01);
-          const priceB = this.getBasePriceForToken(tokenA) * (1 + (Math.random() - 0.5) * 0.01);
-          
-          const spread = Math.abs(priceB - priceA) / priceA * 100;
-          const estimatedGas = 0.001 + Math.random() * 0.004; // $0.001-$0.005
-          const flashLoanFee = 0.0005; // 0.05%
-          const netProfit = spread - estimatedGas - flashLoanFee;
-
-          if (netProfit > 0.1) { // Only profitable opportunities
-            opportunities.push({
-              id: `arb-${i}-${Date.now()}`,
-              tokenA,
-              tokenB,
-              dexA: this.getRandomDex(chainA),
-              dexB: this.getRandomDex(chainB),
-              chainA,
-              chainB,
-              priceA,
-              priceB,
-              spread,
-              profitOpportunity: netProfit,
-              confidence: 85 + Math.random() * 10,
-              estimatedGas,
-              flashLoanFee,
-              netProfit
-            });
-          }
-        }
+      if (!priceResponse.success) {
+        throw new Error('Failed to get live prices for arbitrage calculation');
       }
+
+      const opportunities = this.calculateRealArbitrageFromPrices(priceResponse.data);
+
+      console.log(`🔴 LIVE: Found ${opportunities.length} real arbitrage opportunities`);
 
       return {
         success: true,
-        opportunities: opportunities.sort((a, b) => b.netProfit - a.netProfit),
+        opportunities: opportunities.filter(opp => opp.netProfit > 1), // Minimum $1 profit
         timestamp: Date.now()
       };
     } catch (error) {
-      console.error('Arbitrage opportunities API error:', error);
-      return {
-        success: false,
-        opportunities: [],
-        timestamp: Date.now()
-      };
+      console.error('🚫 LIVE: Arbitrage opportunities error:', error);
+      throw error;
     }
   }
 
-  // Health check endpoint
+  private static calculateRealArbitrageFromPrices(prices: LiveTokenData[]): ArbitrageOpportunity[] {
+    const opportunities: ArbitrageOpportunity[] = [];
+    
+    // Group prices by token
+    const tokenPrices: Record<string, LiveTokenData[]> = {};
+    for (const price of prices) {
+      if (!tokenPrices[price.symbol]) {
+        tokenPrices[price.symbol] = [];
+      }
+      tokenPrices[price.symbol].push(price);
+    }
+
+    // Find arbitrage between different sources for same token
+    for (const [token, priceList] of Object.entries(tokenPrices)) {
+      if (priceList.length < 2) continue;
+
+      const sortedPrices = priceList.sort((a, b) => a.price - b.price);
+      const lowestPrice = sortedPrices[0];
+      const highestPrice = sortedPrices[sortedPrices.length - 1];
+
+      const spread = ((highestPrice.price - lowestPrice.price) / lowestPrice.price) * 100;
+      
+      if (spread > 0.1) { // Minimum 0.1% spread
+        const estimatedGas = 0.002; // $2 gas estimate
+        const flashLoanFee = 0.0005; // 0.05% flash loan fee
+        const netProfit = (spread / 100) * 1000 - estimatedGas - flashLoanFee; // For $1000 trade
+
+        if (netProfit > 1) {
+          opportunities.push({
+            id: `real-arb-${token}-${Date.now()}`,
+            tokenA: token,
+            tokenB: 'USDC',
+            dexA: lowestPrice.source,
+            dexB: highestPrice.source,
+            chainA: lowestPrice.chainId || 101,
+            chainB: highestPrice.chainId || 8453,
+            priceA: lowestPrice.price,
+            priceB: highestPrice.price,
+            spread,
+            profitOpportunity: netProfit,
+            confidence: 90, // High confidence for real price arbitrage
+            estimatedGas,
+            flashLoanFee,
+            netProfit
+          });
+        }
+      }
+    }
+
+    return opportunities.sort((a, b) => b.netProfit - a.netProfit);
+  }
+
   static async healthCheck(): Promise<{
     status: 'healthy' | 'degraded' | 'unhealthy';
     services: {
-      jupiter: boolean;
-      oneInch: boolean;
+      binance: boolean;
       coinGecko: boolean;
+      coinbase: boolean;
       database: boolean;
     };
     uptime: number;
@@ -219,11 +327,35 @@ export class LiveFeedApiService {
     rateLimitRemaining: number;
   }> {
     const services = {
-      jupiter: Math.random() > 0.05, // 95% uptime
-      oneInch: Math.random() > 0.1, // 90% uptime
-      coinGecko: Math.random() > 0.05, // 95% uptime
+      binance: false,
+      coinGecko: false,
+      coinbase: false,
       database: true
     };
+
+    try {
+      // Test Binance
+      const binanceTest = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
+      services.binance = binanceTest.ok;
+    } catch {
+      services.binance = false;
+    }
+
+    try {
+      // Test CoinGecko
+      const cgTest = await fetch('https://api.coingecko.com/api/v3/ping');
+      services.coinGecko = cgTest.ok;
+    } catch {
+      services.coinGecko = false;
+    }
+
+    try {
+      // Test Coinbase
+      const cbTest = await fetch('https://api.coinbase.com/v2/currencies');
+      services.coinbase = cbTest.ok;
+    } catch {
+      services.coinbase = false;
+    }
 
     const healthyServices = Object.values(services).filter(Boolean).length;
     const totalServices = Object.values(services).length;
@@ -246,35 +378,6 @@ export class LiveFeedApiService {
     };
   }
 
-  // Helper methods
-  private static getBasePriceForToken(token: string): number {
-    const basePrices: Record<string, number> = {
-      'SOL': 23.45,
-      'ETH': 1850.00,
-      'USDC': 1.00,
-      'USDT': 1.00,
-      'FTM': 0.25
-    };
-    return basePrices[token] || 1.00;
-  }
-
-  private static getChainIdForToken(token: string): number {
-    if (token === 'SOL') return 101; // Solana
-    if (token === 'FTM') return 250; // Fantom
-    return 8453; // Base for ETH, USDC, USDT
-  }
-
-  private static getRandomDex(chainId: number): string {
-    const dexes: Record<number, string[]> = {
-      101: ['Jupiter', 'Raydium', 'Orca', 'Serum'],
-      8453: ['Uniswap V3', 'SushiSwap', 'Curve'],
-      250: ['SpookySwap', 'SpiritSwap']
-    };
-    const chainDexes = dexes[chainId] || dexes[8453];
-    return chainDexes[Math.floor(Math.random() * chainDexes.length)];
-  }
-
-  // CORS headers for local development
   static getCORSHeaders(): Record<string, string> {
     return {
       'Access-Control-Allow-Origin': '*',
@@ -284,7 +387,6 @@ export class LiveFeedApiService {
     };
   }
 
-  // Connection guide for local setup
   static getLocalConnectionGuide(): {
     endpoint: string;
     sampleRequests: Record<string, any>;
@@ -310,8 +412,8 @@ export class LiveFeedApiService {
           url: `${this.config.apiEndpoint}/health`
         }
       },
-      authentication: 'Optional API key in header: X-API-Key',
-      rateLimits: `${this.config.rateLimitPerMinute} requests per minute`
+      authentication: 'API key required for live trading: X-API-Key',
+      rateLimits: `${this.config.rateLimitPerMinute} requests per minute (live trading)`
     };
   }
 }

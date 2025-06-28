@@ -36,17 +36,17 @@ export class PriceAggregator {
   private static priceCache = new Map<string, TokenPrice>();
   private static dexPriceCache = new Map<string, DEXPrice[]>();
   private static listeners = new Set<(prices: Map<string, TokenPrice>) => void>();
-  private static isLiveMode = false;
+  private static isLiveMode = true; // Always live mode
 
   static async initialize() {
     const config = await ConfigurationService.loadConfiguration();
-    this.isLiveMode = config.enableRealTimeMode;
+    this.isLiveMode = true; // Force live mode
     
-    if (this.isLiveMode && ConfigurationService.hasApiKeys()) {
+    if (ConfigurationService.hasApiKeys()) {
       LivePriceService.setConfig(config);
-      console.log('PriceAggregator: Live mode enabled');
+      console.log('🚀 PriceAggregator: LIVE MODE ONLY - Mock data removed');
     } else {
-      console.log('PriceAggregator: Demo mode active');
+      throw new Error('API keys required for live trading. Mock data has been removed.');
     }
   }
 
@@ -54,108 +54,105 @@ export class PriceAggregator {
     const cacheKey = `${symbol}-${chainId || 'all'}`;
     const cached = this.priceCache.get(cacheKey);
     
-    if (cached && Date.now() - cached.lastUpdated < 30000) { // 30 second cache
+    if (cached && Date.now() - cached.lastUpdated < 5000) { // 5 second cache for live trading
       return cached;
     }
 
     try {
-      let price: TokenPrice | null = null;
-
-      if (this.isLiveMode) {
-        // Use live price service
-        const livePrice = await LivePriceService.getAggregatedPrice(symbol, chainId ? parseInt(chainId) : undefined);
-        if (livePrice) {
-          price = livePrice;
-        }
-      }
-
-      // Fallback to mock data if live mode fails or is disabled
-      if (!price) {
-        price = await this.getMockPrice(symbol);
-      }
-
-      if (price) {
-        this.priceCache.set(cacheKey, price);
-        this.notifyListeners();
-      }
+      // ONLY use live price service - no fallbacks to mock data
+      const livePrice = await LivePriceService.getAggregatedPrice(symbol, chainId ? parseInt(chainId) : undefined);
       
-      return price;
+      if (!livePrice) {
+        throw new Error(`Failed to get live price for ${symbol}. Live trading requires real data.`);
+      }
+
+      this.priceCache.set(cacheKey, livePrice);
+      this.notifyListeners();
+      
+      console.log(`🔴 LIVE: ${symbol} = $${livePrice.price} from ${livePrice.source}`);
+      return livePrice;
     } catch (error) {
-      console.error(`Error fetching price for ${symbol}:`, error);
-      return cached || await this.getMockPrice(symbol);
+      console.error(`🚫 LIVE TRADING ERROR - Failed to get price for ${symbol}:`, error);
+      throw error; // Don't return mock data - throw error for live trading
     }
-  }
-
-  private static async getMockPrice(symbol: string): Promise<TokenPrice> {
-    // Enhanced mock data that's more realistic
-    const basePrices: Record<string, number> = {
-      'SOL': 23.45,
-      'ETH': 2340,
-      'USDC': 1.00,
-      'USDT': 1.00,
-      'BTC': 43500
-    };
-
-    const basePrice = basePrices[symbol] || 100;
-    const variance = basePrice * 0.02; // 2% variance
-    
-    return {
-      symbol,
-      price: basePrice + (Math.random() - 0.5) * variance,
-      change24h: (Math.random() - 0.5) * 10,
-      volume24h: 1000000 + Math.random() * 5000000,
-      lastUpdated: Date.now(),
-      source: this.isLiveMode ? 'live-fallback' : 'mock'
-    };
   }
 
   static async getDEXPrices(pair: string, chainId: string): Promise<DEXPrice[]> {
     const cacheKey = `${pair}-${chainId}`;
     const cached = this.dexPriceCache.get(cacheKey);
     
-    if (cached && Date.now() - 30000 < Date.now()) {
+    if (cached && Date.now() - 5000 < Date.now()) { // 5 second cache
       return cached;
     }
 
     try {
-      let prices: DEXPrice[] = [];
-
-      if (this.isLiveMode) {
-        // In live mode, we would fetch from actual DEX APIs
-        prices = await this.fetchLiveDEXPrices(pair, chainId);
-      } else {
-        prices = await this.getMockDEXPrices(pair, chainId);
+      // ONLY fetch from live DEX APIs - no mock data
+      const prices = await this.fetchLiveDEXPrices(pair, chainId);
+      
+      if (prices.length === 0) {
+        throw new Error(`No live DEX prices available for ${pair} on chain ${chainId}`);
       }
 
       this.dexPriceCache.set(cacheKey, prices);
       return prices;
     } catch (error) {
-      console.error(`Error fetching DEX prices for ${pair}:`, error);
-      return cached || await this.getMockDEXPrices(pair, chainId);
+      console.error(`🚫 LIVE DEX ERROR for ${pair}:`, error);
+      throw error; // No fallback to mock data
     }
   }
 
   private static async fetchLiveDEXPrices(pair: string, chainId: string): Promise<DEXPrice[]> {
-    // This would integrate with actual DEX APIs like Jupiter, 1inch aggregators
-    // For now, return enhanced mock data
-    return this.getMockDEXPrices(pair, chainId);
+    // Real DEX integration - remove all mock data
+    const config = await ConfigurationService.loadConfiguration();
+    
+    try {
+      if (chainId === '101') { // Solana
+        return await this.fetchSolanaDEXPrices(pair);
+      } else if (chainId === '8453') { // Base
+        return await this.fetchBaseDEXPrices(pair);
+      } else if (chainId === '250') { // Fantom
+        return await this.fetchFantomDEXPrices(pair);
+      }
+      
+      throw new Error(`Unsupported chain ${chainId} for live DEX prices`);
+    } catch (error) {
+      console.error('Live DEX fetch failed:', error);
+      throw error;
+    }
   }
 
-  private static async getMockDEXPrices(pair: string, chainId: string): Promise<DEXPrice[]> {
-    const dexes = chainId === '1' ? 
-      ['Uniswap V3', 'SushiSwap', 'Curve', 'Balancer', '1inch', 'Paraswap'] :
-      ['Raydium', 'Orca', 'Jupiter', 'Serum'];
-    
-    const basePrice = 23.45;
-    
-    return dexes.map(dex => ({
-      dex,
-      pair,
-      price: basePrice + (Math.random() - 0.5) * 0.5,
-      liquidity: 1000000 + Math.random() * 5000000,
-      volume24h: 500000 + Math.random() * 2000000,
-      spread: 0.05 + Math.random() * 0.15
-    }));
+  private static async fetchSolanaDEXPrices(pair: string): Promise<DEXPrice[]> {
+    try {
+      // Jupiter aggregator API for real Solana DEX prices
+      const response = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${pair.split('/')[0]}&outputMint=${pair.split('/')[1]}&amount=1000000`);
+      const data = await response.json();
+      
+      if (data.routePlan) {
+        return data.routePlan.map((route: any) => ({
+          dex: route.swapInfo.label,
+          pair,
+          price: parseFloat(route.swapInfo.outAmount) / 1000000,
+          liquidity: route.swapInfo.feeAmount || 0,
+          volume24h: 0, // Would need additional API call
+          spread: parseFloat(route.swapInfo.priceImpactPct || '0')
+        }));
+      }
+      
+      throw new Error('No Solana DEX data available');
+    } catch (error) {
+      console.error('Solana DEX fetch failed:', error);
+      throw error;
+    }
+  }
+
+  private static async fetchBaseDEXPrices(pair: string): Promise<DEXPrice[]> {
+    // Real Base chain DEX integration would go here
+    throw new Error('Base DEX integration not yet implemented - live data required');
+  }
+
+  private static async fetchFantomDEXPrices(pair: string): Promise<DEXPrice[]> {
+    // Real Fantom DEX integration would go here
+    throw new Error('Fantom DEX integration not yet implemented - live data required');
   }
 
   static subscribe(callback: (prices: Map<string, TokenPrice>) => void): () => void {
@@ -168,16 +165,20 @@ export class PriceAggregator {
   }
 
   static startRealTimeUpdates(): void {
+    console.log('🔴 LIVE MODE: Starting real-time price updates');
     setInterval(async () => {
-      // Update popular tokens
       const popularTokens = ['SOL', 'ETH', 'USDC', 'USDT'];
-      await Promise.all(popularTokens.map(token => this.getTokenPrice(token)));
-    }, 5000);
+      await Promise.all(popularTokens.map(token => 
+        this.getTokenPrice(token).catch(err => 
+          console.error(`Failed to update ${token}:`, err)
+        )
+      ));
+    }, 2000); // 2 second updates for live trading
   }
 
   static getLiveModeStatus(): { isLive: boolean; hasApiKeys: boolean } {
     return {
-      isLive: this.isLiveMode,
+      isLive: true, // Always live
       hasApiKeys: ConfigurationService.hasApiKeys()
     };
   }
