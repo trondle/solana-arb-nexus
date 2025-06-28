@@ -7,6 +7,7 @@ import MultiChainAIDashboard from "./MultiChainAIDashboard";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import LiveModeControl from "./LiveModeControl";
 import LiveFeedApiPanel from "./LiveFeedApiPanel";
+import LocalSystemConnector from "./LocalSystemConnector";
 import WalletDashboard from "../wallet/WalletDashboard";
 
 const DashboardTabs = () => {
@@ -16,7 +17,7 @@ const DashboardTabs = () => {
       <LiveModeControl />
       
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="wallet">Wallet</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -24,6 +25,7 @@ const DashboardTabs = () => {
           <TabsTrigger value="arbitrage">Opportunities</TabsTrigger>
           <TabsTrigger value="multichain">Multi-Chain AI</TabsTrigger>
           <TabsTrigger value="api">Live Feed API</TabsTrigger>
+          <TabsTrigger value="local">Local Connect</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview">
@@ -52,6 +54,10 @@ const DashboardTabs = () => {
         
         <TabsContent value="api">
           <LiveFeedApiPanel />
+        </TabsContent>
+        
+        <TabsContent value="local">
+          <LocalSystemConnector />
         </TabsContent>
       </Tabs>
     </div>
