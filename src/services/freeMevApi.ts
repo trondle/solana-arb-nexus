@@ -1,4 +1,3 @@
-
 export class FreeMevApi {
   private static initialized = false;
   private static baseUrl = '';
@@ -7,6 +6,51 @@ export class FreeMevApi {
     this.initialized = true;
     this.baseUrl = 'https://api.binance.com/api/v3'; // Real Binance API
     console.log('🔴 LIVE: FreeMevApi initialized with real endpoints');
+  }
+
+  static async getHealthStatus() {
+    if (!this.initialized) {
+      return {
+        status: 'unhealthy',
+        version: '1.0.0',
+        initialized: false,
+        endpoints: {
+          binance: false,
+          coinbase: false
+        }
+      };
+    }
+
+    try {
+      // Test Binance endpoint
+      const binanceTest = await fetch(`${this.baseUrl}/ping`);
+      const binanceHealthy = binanceTest.ok;
+
+      // Test Coinbase endpoint
+      const coinbaseTest = await fetch('https://api.coinbase.com/v2/currencies');
+      const coinbaseHealthy = coinbaseTest.ok;
+
+      return {
+        status: (binanceHealthy && coinbaseHealthy) ? 'healthy' : 'degraded',
+        version: '1.0.0',
+        initialized: true,
+        endpoints: {
+          binance: binanceHealthy,
+          coinbase: coinbaseHealthy
+        }
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        version: '1.0.0',
+        initialized: true,
+        endpoints: {
+          binance: false,
+          coinbase: false
+        },
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 
   static async getMevOpportunities(tokens: string[], apiKey: string) {
