@@ -186,13 +186,13 @@ const ArbitrageOpportunities = () => {
                 <div key={`${opportunity.id}-${index}`} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <Badge variant="outline">{opportunity.token}</Badge>
+                      <Badge variant="outline">{opportunity.pair?.split('/')[0] || 'Token'}</Badge>
                       <span className="text-sm text-muted-foreground">
                         {opportunity.fromChain} → {opportunity.toChain}
                       </span>
                     </div>
-                    <Badge variant={opportunity.riskLevel === 'LOW' ? 'default' : 'secondary'}>
-                      Risk: {opportunity.riskLevel}
+                    <Badge variant={opportunity.riskLevel === 'low' ? 'default' : 'secondary'}>
+                      Risk: {opportunity.riskLevel.toUpperCase()}
                     </Badge>
                   </div>
 
@@ -209,17 +209,17 @@ const ArbitrageOpportunities = () => {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Profit %</p>
-                      <p className="font-semibold">{opportunity.profitPercent?.toFixed(2) || '0'}%</p>
+                      <p className="font-semibold">{opportunity.spread?.toFixed(2) || '0'}%</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Execution Time</p>
-                      <p className="font-semibold">{opportunity.executionTime || '~2min'}</p>
+                      <p className="font-semibold">{Math.ceil((opportunity.executionTime || 5000) / 1000)}s</p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">
-                      DEX: {opportunity.dex} • Gas optimized • Bridge fees included
+                      Bridge Fee: ${opportunity.bridgeFee?.toFixed(4) || '0.10'} • Gas optimized • Bridge fees included
                     </div>
                     <Button 
                       size="sm" 
