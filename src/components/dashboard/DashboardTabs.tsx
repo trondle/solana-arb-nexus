@@ -1,71 +1,25 @@
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DashboardContent from "./DashboardContent";
-// import PriceTracker from "./PriceTracker"; // DISABLED - Live Price Tracker
-import ArbitrageOpportunities from "./ArbitrageOpportunities";
-import MultiChainAIDashboard from "./MultiChainAIDashboard";
-import AnalyticsDashboard from "./AnalyticsDashboard";
-// import LiveModeControl from "./LiveModeControl"; // DISABLED - Live Trading Mode Control
-import LiveFeedApiPanel from "./LiveFeedApiPanel";
-import LocalSystemConnector from "./LocalSystemConnector";
-import WalletDashboard from "../wallet/WalletDashboard";
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import DashboardContent from './DashboardContent';
+import UltraLowCapitalDashboard from './UltraLowCapitalDashboard';
 
 const DashboardTabs = () => {
   return (
-    <div className="space-y-6">
-      {/* DISABLED - Live Mode Control 
-      <LiveModeControl />
-      */}
+    <Tabs defaultValue="main" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="main">Main Dashboard</TabsTrigger>
+        <TabsTrigger value="ultra-low">Ultra-Low Capital ($20)</TabsTrigger>
+      </TabsList>
       
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="wallet">Wallet</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          {/* DISABLED - Live Prices Tab */}
-          {/* <TabsTrigger value="prices">Live Prices</TabsTrigger> */}
-          <TabsTrigger value="arbitrage">Opportunities</TabsTrigger>
-          <TabsTrigger value="multichain">Multi-Chain AI</TabsTrigger>
-          <TabsTrigger value="api">Live Feed API</TabsTrigger>
-          <TabsTrigger value="local">Local Connect</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview">
-          <DashboardContent />
-        </TabsContent>
-        
-        <TabsContent value="wallet">
-          <WalletDashboard />
-        </TabsContent>
-        
-        <TabsContent value="analytics">
-          <AnalyticsDashboard />
-        </TabsContent>
-        
-        {/* DISABLED - Live Prices Tab Content */}
-        {/* 
-        <TabsContent value="prices">
-          <PriceTracker />
-        </TabsContent>
-        */}
-        
-        <TabsContent value="arbitrage">
-          <ArbitrageOpportunities />
-        </TabsContent>
-        
-        <TabsContent value="multichain">
-          <MultiChainAIDashboard />
-        </TabsContent>
-        
-        <TabsContent value="api">
-          <LiveFeedApiPanel />
-        </TabsContent>
-        
-        <TabsContent value="local">
-          <LocalSystemConnector />
-        </TabsContent>
-      </Tabs>
-    </div>
+      <TabsContent value="main" className="space-y-6">
+        <DashboardContent />
+      </TabsContent>
+      
+      <TabsContent value="ultra-low" className="space-y-6">
+        <UltraLowCapitalDashboard />
+      </TabsContent>
+    </Tabs>
   );
 };
 
