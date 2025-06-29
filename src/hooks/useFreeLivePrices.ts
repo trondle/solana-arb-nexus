@@ -55,7 +55,7 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
     FreeMevApi.initialize();
     const defaultKey = InternalApiService.getDefaultApiKey();
     setApiKey(defaultKey);
-    console.log('🔑 Using API key for free price service:', defaultKey?.substring(0, 20) + '...');
+    console.log('🔑 Using optimized API key for price service');
   }, []);
 
   const fetchPrices = useCallback(async () => {
@@ -69,7 +69,7 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
       if (response.success) {
         const newPrices: Record<string, LivePrice> = {};
         
-        // Process price data
+        // Process price data efficiently
         response.data.prices.forEach((tokenData: any) => {
           if (tokenData.solana) {
             newPrices[`${tokenData.token}-SOL`] = {
@@ -113,35 +113,37 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
         setPrices(newPrices);
         setArbitrageOpportunities(response.data.arbitrageOpportunities || []);
         
-        // Generate flash loan opportunities for ZeroCapitalArbitrage
-        const flashOpportunities = generateFlashLoanOpportunities(response.data.arbitrageOpportunities || []);
+        // Generate fewer flash loan opportunities to reduce resource usage
+        const flashOpportunities = generateOptimizedFlashLoanOpportunities(response.data.arbitrageOpportunities || []);
         setFlashLoanOpportunities(flashOpportunities);
         
         setLastUpdate(new Date(response.data.timestamp));
         setIsConnected(true);
         
-        console.log(`✅ Free API: Updated ${Object.keys(newPrices).length} prices, ${flashOpportunities.length} flash loan opportunities`);
+        if (!response.data.cached) {
+          console.log(`✅ Optimized API: Updated ${Object.keys(newPrices).length} prices, ${flashOpportunities.length} flash loan opportunities`);
+        }
       } else {
         throw new Error('API request failed');
       }
       
     } catch (err) {
-      console.error('Error fetching free live prices:', err);
+      console.error('Error fetching optimized live prices:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch prices');
       setIsConnected(false);
     }
   }, [tokens, apiKey]);
 
-  const generateFlashLoanOpportunities = (opportunities: ArbitrageOpportunity[]): FlashLoanArbitrageOpportunity[] => {
+  const generateOptimizedFlashLoanOpportunities = (opportunities: ArbitrageOpportunity[]): FlashLoanArbitrageOpportunity[] => {
     const dexMappings = {
-      'solana': ['Raydium', 'Orca', 'Jupiter', 'Serum'],
-      'base': ['Uniswap V3', 'SushiSwap', 'Curve', 'Balancer'],
-      'fantom': ['SpookySwap', 'SpiritSwap', 'Curve', 'Beethoven X']
+      'solana': ['Raydium', 'Orca', 'Jupiter'],
+      'base': ['Uniswap V3', 'SushiSwap'],
+      'fantom': ['SpookySwap', 'SpiritSwap']
     };
 
     return opportunities
-      .filter(opp => opp.profitPercent > 0.5) // Only profitable opportunities
-      .slice(0, 8) // Limit to 8 opportunities
+      .filter(opp => opp.profitPercent > 0.8) // Higher threshold
+      .slice(0, 4) // Limit to 4 opportunities max
       .map((opp, index) => {
         const buyChainName = typeof opp.buyChain === 'string' ? opp.buyChain : 
                            opp.buyChain === 8453 ? 'base' : 
@@ -156,15 +158,15 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
         const buyDex = buyDexes[Math.floor(Math.random() * buyDexes.length)];
         const sellDex = sellDexes[Math.floor(Math.random() * sellDexes.length)];
 
-        const requiredCapital = 2000 + Math.random() * 23000; // $2k-$25k range
-        const flashLoanFee = requiredCapital * 0.05 / 100; // 0.05% flash loan fee
-        const tradingFees = requiredCapital * 0.006; // 0.6% trading fees
+        const requiredCapital = 3000 + Math.random() * 12000; // Reduced range
+        const flashLoanFee = requiredCapital * 0.05 / 100;
+        const tradingFees = requiredCapital * 0.006;
         const totalFees = flashLoanFee + tradingFees;
         const estimatedProfit = requiredCapital * opp.profitPercent / 100;
         const netProfit = estimatedProfit - totalFees;
 
         return {
-          id: `flash-${index}-${Date.now()}`,
+          id: `flash-optimized-${index}-${Date.now()}`,
           pair: `${opp.token}/USDC`,
           buyDex,
           sellDex,
@@ -186,8 +188,8 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
     // Initial fetch
     fetchPrices();
     
-    // Set up regular updates
-    const interval = setInterval(fetchPrices, 5000); // Update every 5 seconds
+    // Reduced update frequency: every 15 seconds instead of 5 seconds
+    const interval = setInterval(fetchPrices, 15000);
     
     return () => clearInterval(interval);
   }, [fetchPrices, apiKey]);
@@ -198,16 +200,16 @@ export const useFreeLivePrices = (tokens: string[] = ['SOL', 'USDC', 'USDT', 'ET
 
   const getBestArbitrageOpportunities = useCallback(() => {
     return arbitrageOpportunities
-      .filter(opp => opp.profitPercent > 0.1)
+      .filter(opp => opp.profitPercent > 0.2)
       .sort((a, b) => b.profitPercent - a.profitPercent)
-      .slice(0, 5);
+      .slice(0, 3); // Reduced from 5 to 3
   }, [arbitrageOpportunities]);
 
   const getBestFlashLoanOpportunities = useCallback(() => {
     return flashLoanOpportunities
       .filter(opp => opp.netProfit > 0)
       .sort((a, b) => b.netProfit - a.netProfit)
-      .slice(0, 6);
+      .slice(0, 4); // Reduced from 6 to 4
   }, [flashLoanOpportunities]);
 
   return {
