@@ -1,11 +1,11 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardContent from "./DashboardContent";
-import PriceTracker from "./PriceTracker";
+// import PriceTracker from "./PriceTracker"; // DISABLED - Live Price Tracker
 import ArbitrageOpportunities from "./ArbitrageOpportunities";
 import MultiChainAIDashboard from "./MultiChainAIDashboard";
 import AnalyticsDashboard from "./AnalyticsDashboard";
-import LiveModeControl from "./LiveModeControl";
+// import LiveModeControl from "./LiveModeControl"; // DISABLED - Live Trading Mode Control
 import LiveFeedApiPanel from "./LiveFeedApiPanel";
 import LocalSystemConnector from "./LocalSystemConnector";
 import WalletDashboard from "../wallet/WalletDashboard";
@@ -13,15 +13,17 @@ import WalletDashboard from "../wallet/WalletDashboard";
 const DashboardTabs = () => {
   return (
     <div className="space-y-6">
-      {/* Live Mode Control */}
+      {/* DISABLED - Live Mode Control 
       <LiveModeControl />
+      */}
       
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="wallet">Wallet</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="prices">Live Prices</TabsTrigger>
+          {/* DISABLED - Live Prices Tab */}
+          {/* <TabsTrigger value="prices">Live Prices</TabsTrigger> */}
           <TabsTrigger value="arbitrage">Opportunities</TabsTrigger>
           <TabsTrigger value="multichain">Multi-Chain AI</TabsTrigger>
           <TabsTrigger value="api">Live Feed API</TabsTrigger>
@@ -40,9 +42,12 @@ const DashboardTabs = () => {
           <AnalyticsDashboard />
         </TabsContent>
         
+        {/* DISABLED - Live Prices Tab Content */}
+        {/* 
         <TabsContent value="prices">
           <PriceTracker />
         </TabsContent>
+        */}
         
         <TabsContent value="arbitrage">
           <ArbitrageOpportunities />

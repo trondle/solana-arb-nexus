@@ -5,7 +5,7 @@ import { useFlashLoanArbitrage } from '../../hooks/useFlashLoanArbitrage';
 import MultiChainOverview from './MultiChainOverview';
 import LiveFlashLoanOpportunities from './LiveFlashLoanOpportunities';
 import ArbitrageOpportunities from './ArbitrageOpportunities';
-import PriceTracker from './PriceTracker';
+// import PriceTracker from './PriceTracker'; // DISABLED - Live Price Tracker
 import ExecutionProgress from './ExecutionProgress';
 import ConfigurationPanel from './ConfigurationPanel';
 import TestModePanel from './TestModePanel';
@@ -69,8 +69,10 @@ const DashboardContent = () => {
       {/* Regular Arbitrage Opportunities */}
       <ArbitrageOpportunities />
       
-      {/* Price Tracking */}
+      {/* DISABLED - Price Tracking */}
+      {/* 
       <PriceTracker />
+      */}
       
       {/* Execution Progress */}
       <ExecutionProgress 
