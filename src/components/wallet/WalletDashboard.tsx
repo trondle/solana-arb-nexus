@@ -12,87 +12,113 @@ import {
   ArrowDownLeft, 
   RefreshCw,
   ExternalLink,
-  Eye,
-  EyeOff
+  AlertTriangle
 } from 'lucide-react';
+import { PhantomWalletService, WalletBalance } from '../../services/phantomWalletService';
+import { LiveTradingEngine } from '../../services/liveTradingEngine';
 
 const WalletDashboard = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
-  const [balance, setBalance] = useState({
-    SOL: 0,
-    USDC: 0,
-    ETH: 0
+  const [balance, setBalance] = useState<WalletBalance>({
+    sol: 0,
+    usdc: 0,
+    usdt: 0,
+    totalUSD: 0
   });
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isTradingEngineActive, setIsTradingEngineActive] = useState(false);
 
-  // Simulate wallet connection for demo
   useEffect(() => {
-    // Check if wallet was previously connected
-    const savedWallet = localStorage.getItem('wallet_connected');
-    if (savedWallet) {
-      setIsConnected(true);
-      setWalletAddress('5FHwKrd...');
-      setBalance({
-        SOL: 12.456,
-        USDC: 1250.89,
-        ETH: 0.234
-      });
-    }
+    initializeWallet();
   }, []);
+
+  const initializeWallet = async () => {
+    try {
+      const isInitialized = await PhantomWalletService.initialize();
+      if (isInitialized) {
+        const publicKey = PhantomWalletService.getPublicKey();
+        if (publicKey) {
+          setIsConnected(true);
+          setWalletAddress(publicKey);
+          await refreshBalances();
+        }
+      }
+    } catch (error) {
+      console.error('Wallet initialization failed:', error);
+      setError(error instanceof Error ? error.message : 'Wallet initialization failed');
+    }
+  };
 
   const connectWallet = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      // Simulate wallet connection
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await PhantomWalletService.connect();
       
-      setIsConnected(true);
-      setWalletAddress('5FHwKrdHEGaPrxhFzCFP8mXaHvYFMNmfqgmw4LA1tFW8');
-      setBalance({
-        SOL: 12.456,
-        USDC: 1250.89,
-        ETH: 0.234
-      });
-      
-      localStorage.setItem('wallet_connected', 'true');
-      console.log('✅ Wallet connected successfully');
+      if (result.success) {
+        setIsConnected(true);
+        setWalletAddress(result.publicKey);
+        await refreshBalances();
+        
+        // Initialize trading engine
+        const engineInitialized = await LiveTradingEngine.initialize();
+        setIsTradingEngineActive(engineInitialized);
+        
+        console.log('✅ Wallet connected and trading engine initialized');
+      } else {
+        setError(result.error || 'Failed to connect wallet');
+      }
     } catch (error) {
       console.error('❌ Wallet connection failed:', error);
+      setError(error instanceof Error ? error.message : 'Wallet connection failed');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const disconnectWallet = () => {
-    setIsConnected(false);
-    setWalletAddress('');
-    setBalance({ SOL: 0, USDC: 0, ETH: 0 });
-    localStorage.removeItem('wallet_connected');
-    console.log('🔌 Wallet disconnected');
-  };
-
-  const copyAddress = () => {
-    navigator.clipboard.writeText(walletAddress);
-    console.log('📋 Address copied to clipboard');
+  const disconnectWallet = async () => {
+    try {
+      await PhantomWalletService.disconnect();
+      await LiveTradingEngine.shutdown();
+      
+      setIsConnected(false);
+      setWalletAddress('');
+      setBalance({ sol: 0, usdc: 0, usdt: 0, totalUSD: 0 });
+      setIsTradingEngineActive(false);
+      setError(null);
+      
+      console.log('🔌 Wallet disconnected and trading engine shutdown');
+    } catch (error) {
+      console.error('❌ Wallet disconnect failed:', error);
+      setError('Failed to disconnect wallet');
+    }
   };
 
   const refreshBalances = async () => {
+    if (!isConnected) return;
+    
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      // Simulate balance refresh with slight variations
-      setBalance(prev => ({
-        SOL: prev.SOL + (Math.random() - 0.5) * 0.1,
-        USDC: prev.USDC + (Math.random() - 0.5) * 10,
-        ETH: prev.ETH + (Math.random() - 0.5) * 0.01
-      }));
-      console.log('🔄 Balances refreshed');
+      const walletBalance = await PhantomWalletService.getBalance();
+      setBalance(walletBalance);
+      console.log('🔄 Wallet balance refreshed:', walletBalance);
     } catch (error) {
       console.error('❌ Balance refresh failed:', error);
+      setError('Failed to refresh balance');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const copyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(walletAddress);
+      console.log('📋 Address copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy address:', error);
     }
   };
 
@@ -103,19 +129,28 @@ const WalletDashboard = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wallet className="w-6 h-6" />
-              Wallet Connection
+              Connect Phantom Wallet
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center py-8">
+            {error && (
+              <Alert className="mb-6 text-left">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Connection Error:</strong> {error}
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <Wallet className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">Connect Your Wallet</h3>
+            <h3 className="text-xl font-semibold mb-2">Connect Your Phantom Wallet</h3>
             <p className="text-muted-foreground mb-6">
-              Connect your wallet to start trading and manage your assets
+              Connect your Phantom wallet to access live trading features, flash loans, and real-time MEV opportunities.
             </p>
             <Button 
               onClick={connectWallet} 
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-purple-600 hover:bg-purple-700"
             >
               {isLoading ? (
                 <>
@@ -125,10 +160,14 @@ const WalletDashboard = () => {
               ) : (
                 <>
                   <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
+                  Connect Phantom Wallet
                 </>
               )}
             </Button>
+            
+            <div className="mt-4 text-sm text-muted-foreground">
+              Don't have Phantom? <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Download here</a>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -143,8 +182,13 @@ const WalletDashboard = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Wallet className="w-6 h-6 text-green-500" />
-              Wallet Dashboard
-              <Badge variant="default" className="bg-green-500">Connected</Badge>
+              Phantom Wallet Connected
+              <Badge variant="default" className="bg-green-500">Live</Badge>
+              {isTradingEngineActive && (
+                <Badge variant="outline" className="border-blue-500 text-blue-600">
+                  Trading Active
+                </Badge>
+              )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={refreshBalances} disabled={isLoading}>
@@ -157,10 +201,17 @@ const WalletDashboard = () => {
           </div>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1">
               <div className="text-sm text-muted-foreground">Wallet Address</div>
-              <div className="font-mono text-sm">{walletAddress}</div>
+              <div className="font-mono text-sm break-all">{walletAddress}</div>
             </div>
             <Button variant="outline" size="sm" onClick={copyAddress}>
               <Copy className="w-4 h-4" />
@@ -174,17 +225,17 @@ const WalletDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Token Balances */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Real Token Balances */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">SOL Balance</CardTitle>
             <Badge variant="outline">Solana</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{balance.SOL.toFixed(3)} SOL</div>
+            <div className="text-2xl font-bold">{balance.sol.toFixed(4)} SOL</div>
             <p className="text-xs text-muted-foreground">
-              ~${(balance.SOL * 98.5).toFixed(2)} USD
+              ~${(balance.sol * 100).toFixed(2)} USD
             </p>
           </CardContent>
         </Card>
@@ -192,64 +243,118 @@ const WalletDashboard = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">USDC Balance</CardTitle>
-            <Badge variant="outline">Multi-chain</Badge>
+            <Badge variant="outline">SPL Token</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{balance.USDC.toFixed(2)} USDC</div>
+            <div className="text-2xl font-bold">{balance.usdc.toFixed(2)} USDC</div>
             <p className="text-xs text-muted-foreground">
-              ~${balance.USDC.toFixed(2)} USD
+              ~${balance.usdc.toFixed(2)} USD
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ETH Balance</CardTitle>
-            <Badge variant="outline">Ethereum</Badge>
+            <CardTitle className="text-sm font-medium">USDT Balance</CardTitle>
+            <Badge variant="outline">SPL Token</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{balance.ETH.toFixed(4)} ETH</div>
+            <div className="text-2xl font-bold">{balance.usdt.toFixed(2)} USDT</div>
             <p className="text-xs text-muted-foreground">
-              ~${(balance.ETH * 3420).toFixed(2)} USD
+              ~${balance.usdt.toFixed(2)} USD
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Portfolio</CardTitle>
+            <Badge variant="outline">USD Value</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${balance.totalUSD.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              Real-time valuation
             </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Trading Requirements Alert */}
+      {balance.totalUSD < 10 && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Minimum Balance Required:</strong> You need at least $10 worth of assets to access trading features. 
+            Current balance: ${balance.totalUSD.toFixed(2)}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Trading Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button className="h-16 flex-col gap-2" variant="outline">
+            <Button 
+              className="h-16 flex-col gap-2" 
+              variant="outline"
+              disabled={balance.totalUSD < 10}
+            >
               <Send className="w-5 h-5" />
-              Send
+              Send Tokens
             </Button>
-            <Button className="h-16 flex-col gap-2" variant="outline">
+            <Button 
+              className="h-16 flex-col gap-2" 
+              variant="outline"
+              disabled={balance.totalUSD < 10}
+            >
               <ArrowDownLeft className="w-5 h-5" />
-              Receive
+              Deposit
             </Button>
-            <Button className="h-16 flex-col gap-2" variant="outline">
+            <Button 
+              className="h-16 flex-col gap-2" 
+              variant="outline"
+              disabled={balance.totalUSD < 10}
+            >
               <ArrowUpRight className="w-5 h-5" />
-              Swap
+              Flash Loan
             </Button>
-            <Button className="h-16 flex-col gap-2" variant="outline">
+            <Button 
+              className="h-16 flex-col gap-2" 
+              variant="outline"
+              disabled={balance.totalUSD < 10}
+            >
               <Wallet className="w-5 h-5" />
-              Bridge
+              Arbitrage
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Security Notice */}
-      <Alert>
-        <Eye className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Security Notice:</strong> This is a demo wallet interface. In a live environment, never share your private keys and always verify transaction details before signing.
-        </AlertDescription>
-      </Alert>
+      {/* Live Trading Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Live Trading Status
+            {isTradingEngineActive ? (
+              <Badge variant="default" className="bg-green-500">Active</Badge>
+            ) : (
+              <Badge variant="secondary">Inactive</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {isTradingEngineActive 
+              ? 'Your wallet is connected and ready for live trading. All transactions will be processed on-chain.'
+              : 'Connect your wallet and ensure sufficient balance to activate live trading features.'
+            }
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
