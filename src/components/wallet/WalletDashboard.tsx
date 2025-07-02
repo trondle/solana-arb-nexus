@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { PhantomWalletService, WalletBalance } from '../../services/phantomWalletService';
 import { LiveTradingEngine } from '../../services/liveTradingEngine';
+import SolanaDepositWithdraw from './SolanaDepositWithdraw';
+import SolanaFlashLoan from './SolanaFlashLoan';
 
 const WalletDashboard = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -333,6 +335,19 @@ const WalletDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Deposit & Withdraw */}
+      <SolanaDepositWithdraw 
+        balance={balance}
+        onBalanceUpdate={refreshBalances}
+      />
+
+      {/* Flash Loans */}
+      <SolanaFlashLoan 
+        balance={balance}
+        onBalanceUpdate={refreshBalances}
+        isEngineActive={isTradingEngineActive}
+      />
 
       {/* Live Trading Status */}
       <Card>

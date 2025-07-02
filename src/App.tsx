@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from "next-themes";
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
+import Wallet from '@/pages/Wallet';
 import { useAuth } from '@/hooks/useAuth';
 import './App.css';
 
@@ -36,6 +37,10 @@ function AppContent() {
       <Route 
         path="/dashboard" 
         element={user ? <Dashboard /> : <Navigate to="/login" replace />} 
+      />
+      <Route 
+        path="/wallet" 
+        element={user ? <Wallet /> : <Navigate to="/login" replace />} 
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useUltraLowCapital } from '../../hooks/useUltraLowCapital';
+import { FlashLoanContractService, FlashLoanParams } from '../../services/flashLoanContractService';
+import { LiveTradingEngine } from '../../services/liveTradingEngine';
+import { PhantomWalletService } from '../../services/phantomWalletService';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -14,12 +17,15 @@ import {
   Play,
   Pause,
   RefreshCw,
-  Layers
+  Layers,
+  Bolt
 } from 'lucide-react';
 
 const UltraLowCapitalDashboard = () => {
   const [isActive, setIsActive] = useState(false);
   const [initialCapital] = useState(20); // $20 starting capital
+  const [isFlashLoanExecuting, setIsFlashLoanExecuting] = useState(false);
+  const [flashLoanResult, setFlashLoanResult] = useState<string | null>(null);
   
   const {
     opportunities,
@@ -41,6 +47,39 @@ const UltraLowCapitalDashboard = () => {
     setIsActive(!isActive);
     if (!isActive) {
       scanMicroOpportunities();
+    }
+  };
+
+  const executeFlashLoanArbitrage = async () => {
+    if (!PhantomWalletService.isWalletConnected()) {
+      setFlashLoanResult('Error: Wallet not connected');
+      return;
+    }
+
+    setIsFlashLoanExecuting(true);
+    setFlashLoanResult(null);
+
+    try {
+      // Execute a small flash loan for ultra-low capital arbitrage
+      const flashLoanParams: FlashLoanParams = {
+        amount: 0.5, // 0.5 SOL flash loan
+        token: 'SOL',
+        provider: 'SOLEND',
+        collateralAmount: 0.1, // Only 0.1 SOL as collateral
+        maxSlippage: 0.01
+      };
+
+      const result = await LiveTradingEngine.executeFlashLoanTrade(flashLoanParams);
+      
+      if (result.status === 'closed' && result.realizedPnL > 0) {
+        setFlashLoanResult(`Flash loan successful! Profit: $${result.realizedPnL.toFixed(4)}`);
+      } else {
+        setFlashLoanResult(`Flash loan failed: ${result.realizedPnL < 0 ? 'No arbitrage found' : 'Execution error'}`);
+      }
+    } catch (error) {
+      setFlashLoanResult(`Flash loan error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsFlashLoanExecuting(false);
     }
   };
 
@@ -244,6 +283,57 @@ const UltraLowCapitalDashboard = () => {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Flash Loan Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bolt className="w-5 h-5 text-yellow-500" />
+            Ultra-Low Capital Flash Loans
+            <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+              0.1 SOL Required
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <div className="text-sm font-medium mb-2">Flash Loan Strategy</div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>• Borrow 0.5 SOL with only 0.1 SOL collateral</div>
+                <div>• Execute cross-DEX arbitrage (Orca ↔ Raydium)</div>
+                <div>• Repay loan + fee instantly</div>
+                <div>• Keep profit with minimal capital exposure</div>
+              </div>
+            </div>
+
+            {flashLoanResult && (
+              <div className={`p-3 rounded-lg ${flashLoanResult.includes('successful') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {flashLoanResult}
+              </div>
+            )}
+
+            <Button
+              onClick={executeFlashLoanArbitrage}
+              disabled={isFlashLoanExecuting || !isActive}
+              className="w-full bg-yellow-600 hover:bg-yellow-700"
+              size="lg"
+            >
+              {isFlashLoanExecuting ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Executing Flash Loan...
+                </div>
+              ) : (
+                <>
+                  <Bolt className="w-4 h-4 mr-2" />
+                  Execute Flash Loan Arbitrage
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
