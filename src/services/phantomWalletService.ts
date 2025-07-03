@@ -35,7 +35,7 @@ export interface TransactionResult {
 }
 
 export class PhantomWalletService {
-  private static connection = new Connection('https://solana-api.projectserum.com', 'confirmed');
+  private static connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
   private static provider: PhantomProvider | null = null;
   private static isConnected = false;
 
