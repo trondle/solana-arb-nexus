@@ -1,13 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUltraLowCapital } from '../../hooks/useUltraLowCapital';
 import { FlashLoanContractService, FlashLoanParams } from '../../services/flashLoanContractService';
 import { LiveTradingEngine } from '../../services/liveTradingEngine';
-import { PhantomWalletService } from '../../services/phantomWalletService';
+import { PhantomWalletService, WalletBalance } from '../../services/phantomWalletService';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -23,9 +24,16 @@ import {
 
 const UltraLowCapitalDashboard = () => {
   const [isActive, setIsActive] = useState(false);
-  const [initialCapital] = useState(20); // $20 starting capital
   const [isFlashLoanExecuting, setIsFlashLoanExecuting] = useState(false);
   const [flashLoanResult, setFlashLoanResult] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<WalletBalance>({
+    sol: 0,
+    usdc: 0,
+    usdt: 0,
+    totalUSD: 0
+  });
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [isEngineActive, setIsEngineActive] = useState(false);
   
   const {
     opportunities,
@@ -41,7 +49,31 @@ const UltraLowCapitalDashboard = () => {
     scanMicroOpportunities,
     executeMicroTrade,
     executeBundledTrades
-  } = useUltraLowCapital(initialCapital);
+  } = useUltraLowCapital(walletBalance.totalUSD || 0);
+
+  useEffect(() => {
+    checkWalletConnection();
+  }, []);
+
+  const checkWalletConnection = async () => {
+    try {
+      const connected = PhantomWalletService.isWalletConnected();
+      setIsWalletConnected(connected);
+      
+      if (connected) {
+        const balance = await PhantomWalletService.getBalance();
+        setWalletBalance(balance);
+        
+        // Try to initialize engine if wallet is connected
+        const engineInitialized = await LiveTradingEngine.initialize();
+        setIsEngineActive(engineInitialized);
+      }
+    } catch (error) {
+      console.log('Wallet not connected, using demo mode');
+      setIsWalletConnected(false);
+      setIsEngineActive(false);
+    }
+  };
 
   const handleToggleActive = () => {
     setIsActive(!isActive);
@@ -51,8 +83,13 @@ const UltraLowCapitalDashboard = () => {
   };
 
   const executeFlashLoanArbitrage = async () => {
-    if (!PhantomWalletService.isWalletConnected()) {
-      setFlashLoanResult('Error: Wallet not connected');
+    if (!isWalletConnected) {
+      setFlashLoanResult('Error: Please connect your Phantom wallet first');
+      return;
+    }
+
+    if (!isEngineActive) {
+      setFlashLoanResult('Error: Trading engine failed to initialize. Please check wallet connection and balance.');
       return;
     }
 
@@ -73,6 +110,8 @@ const UltraLowCapitalDashboard = () => {
       
       if (result.status === 'closed' && result.realizedPnL > 0) {
         setFlashLoanResult(`Flash loan successful! Profit: $${result.realizedPnL.toFixed(4)}`);
+        // Refresh wallet balance after successful trade
+        await checkWalletConnection();
       } else {
         setFlashLoanResult(`Flash loan failed: ${result.realizedPnL < 0 ? 'No arbitrage found' : 'Execution error'}`);
       }
@@ -90,16 +129,35 @@ const UltraLowCapitalDashboard = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-blue-500" />
-            Ultra-Low Capital MEV Bot ($20 Minimum)
+            Ultra-Low Capital MEV Bot
             {emergencyMode && (
               <Badge variant="destructive" className="ml-2">
                 <AlertTriangle className="w-4 h-4 mr-1" />
                 Emergency Mode
               </Badge>
             )}
+            {isEngineActive && (
+              <Badge variant="outline" className="border-green-500 text-green-600">
+                Engine Active
+              </Badge>
+            )}
+            {!isWalletConnected && (
+              <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                Demo Mode
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {!isWalletConnected && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="text-sm text-yellow-700">
+                <strong>Demo Mode:</strong> Connect Phantom wallet to access live trading features. 
+                Opportunities shown below are for demonstration purposes.
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center gap-4">
             <Button
               onClick={handleToggleActive}
@@ -107,7 +165,7 @@ const UltraLowCapitalDashboard = () => {
               className="flex items-center gap-2"
             >
               {isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              {isActive ? 'Stop Bot' : 'Start Bot'}
+              {isActive ? 'Stop Scanning' : 'Start Scanning'}
             </Button>
             
             <Button
@@ -124,6 +182,8 @@ const UltraLowCapitalDashboard = () => {
               <span>Active Positions: {activePositions}</span>
               <span>•</span>
               <span>Success Rate: {stats.successRate.toFixed(1)}%</span>
+              <span>•</span>
+              <span>Mode: {isWalletConnected ? 'Live' : 'Demo'}</span>
             </div>
           </div>
         </CardContent>
@@ -141,7 +201,7 @@ const UltraLowCapitalDashboard = () => {
               ${currentCapital.toFixed(2)}
             </div>
             <div className="text-xs text-muted-foreground">
-              Started with ${initialCapital}
+              {isWalletConnected ? 'Live wallet balance' : 'Demo balance (connect wallet for real balance)'}
             </div>
           </CardContent>
         </Card>
@@ -274,9 +334,9 @@ const UltraLowCapitalDashboard = () => {
                       onClick={() => executeMicroTrade(opportunity)}
                       size="sm"
                       className="bg-green-500 hover:bg-green-600"
-                      disabled={!isActive || emergencyMode}
+                      disabled={!isActive || emergencyMode || !isWalletConnected}
                     >
-                      Execute Trade
+                      {isWalletConnected ? 'Execute Trade' : 'Connect Wallet'}
                     </Button>
                   </div>
                 </div>
@@ -298,6 +358,24 @@ const UltraLowCapitalDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {!isWalletConnected && (
+            <Alert className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Phantom wallet not connected. Flash loans require wallet connection and sufficient balance.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {isWalletConnected && !isEngineActive && (
+            <Alert className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Trading engine failed to initialize. Please check your wallet balance and connection.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-4">
             <div className="p-4 bg-yellow-50 rounded-lg">
               <div className="text-sm font-medium mb-2">Flash Loan Strategy</div>
@@ -317,7 +395,7 @@ const UltraLowCapitalDashboard = () => {
 
             <Button
               onClick={executeFlashLoanArbitrage}
-              disabled={isFlashLoanExecuting || !isActive}
+              disabled={isFlashLoanExecuting || !isWalletConnected || !isEngineActive}
               className="w-full bg-yellow-600 hover:bg-yellow-700"
               size="lg"
             >
