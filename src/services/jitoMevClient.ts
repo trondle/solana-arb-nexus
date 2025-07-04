@@ -134,7 +134,7 @@ export class JitoMevClient {
     console.log('🔑 Jito API key configured');
   }
 
-  async shutdown(): void {
+  async shutdown(): Promise<void> {
     if (this.bundleStream) {
       this.bundleStream.close();
       this.bundleStream = undefined;

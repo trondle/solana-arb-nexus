@@ -163,7 +163,7 @@ export class RpcLatencyManager {
     return [...this.endpoints];
   }
 
-  async shutdown(): void {
+  async shutdown(): Promise<void> {
     this.stopMonitoring();
     console.log('🔴 RPC Latency Manager shutdown');
   }

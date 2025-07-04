@@ -201,7 +201,7 @@ export class UnifiedTradingEngine {
   private async executeFlashLoan(opportunity: TradeOpportunity): Promise<ExecutionResult> {
     const flashLoanParams: FlashLoanParams = {
       amount: opportunity.requiredCapital,
-      token: opportunity.token,
+      token: opportunity.token as "SOL" | "USDC" | "USDT",
       provider: 'SOLEND',
       collateralAmount: opportunity.requiredCapital * 0.1,
       maxSlippage: 0.01
