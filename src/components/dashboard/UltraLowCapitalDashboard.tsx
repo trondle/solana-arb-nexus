@@ -1,14 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useUltraLowCapital } from '../../hooks/useUltraLowCapital';
-import { FlashLoanContractService, FlashLoanParams } from '../../services/flashLoanContractService';
-import { LiveTradingEngine } from '../../services/liveTradingEngine';
-import { PhantomWalletService, WalletBalance } from '../../services/phantomWalletService';
+import { useTradingStore } from '../../store/tradingStore';
+import { UnifiedTradingEngine } from '../../services/unifiedTradingEngine';
+import { PhantomWalletService } from '../../services/phantomWalletService';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -23,104 +22,100 @@ import {
 } from 'lucide-react';
 
 const UltraLowCapitalDashboard = () => {
-  const [isActive, setIsActive] = useState(false);
-  const [isFlashLoanExecuting, setIsFlashLoanExecuting] = useState(false);
-  const [flashLoanResult, setFlashLoanResult] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState<WalletBalance>({
-    sol: 0,
-    usdc: 0,
-    usdt: 0,
-    totalUSD: 0
-  });
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [isEngineActive, setIsEngineActive] = useState(false);
-  
   const {
-    opportunities,
-    currentCapital,
-    totalProfit,
-    activePositions,
+    isWalletConnected,
+    walletAddress,
+    walletBalance,
+    isEngineActive,
     isScanning,
     emergencyMode,
-    stats,
+    opportunities,
+    activePositions,
     tradeHistory,
-    capitalEfficiency,
-    dailyROI,
-    scanMicroOpportunities,
-    executeMicroTrade,
-    executeBundledTrades
-  } = useUltraLowCapital(walletBalance.totalUSD || 0);
+    stats
+  } = useTradingStore();
 
-  useEffect(() => {
-    checkWalletConnection();
-  }, []);
+  const engine = UnifiedTradingEngine.getInstance();
 
-  const checkWalletConnection = async () => {
+  // Filter opportunities for ultra-low capital (under $100)
+  const ultraLowOpportunities = opportunities.filter(
+    opp => opp.requiredCapital <= 100 && (opp.riskLevel === 'ultra-low' || opp.riskLevel === 'low')
+  );
+
+  const handleConnectWallet = async () => {
     try {
-      const connected = PhantomWalletService.isWalletConnected();
-      setIsWalletConnected(connected);
-      
-      if (connected) {
-        const balance = await PhantomWalletService.getBalance();
-        setWalletBalance(balance);
-        
-        // Try to initialize engine if wallet is connected
-        const engineInitialized = await LiveTradingEngine.initialize();
-        setIsEngineActive(engineInitialized);
+      const result = await PhantomWalletService.connect();
+      if (result.success) {
+        await engine.initialize();
       }
     } catch (error) {
-      console.log('Wallet not connected, using demo mode');
-      setIsWalletConnected(false);
-      setIsEngineActive(false);
+      console.error('Wallet connection failed:', error);
     }
   };
 
-  const handleToggleActive = () => {
-    setIsActive(!isActive);
-    if (!isActive) {
-      scanMicroOpportunities();
+  const toggleScanning = async () => {
+    if (isScanning) {
+      await engine.stopScanning();
+    } else {
+      await engine.startScanning();
     }
   };
 
-  const executeFlashLoanArbitrage = async () => {
-    if (!isWalletConnected) {
-      setFlashLoanResult('Error: Please connect your Phantom wallet first');
-      return;
-    }
-
-    if (!isEngineActive) {
-      setFlashLoanResult('Error: Trading engine failed to initialize. Please check wallet connection and balance.');
-      return;
-    }
-
-    setIsFlashLoanExecuting(true);
-    setFlashLoanResult(null);
-
-    try {
-      // Execute a small flash loan for ultra-low capital arbitrage
-      const flashLoanParams: FlashLoanParams = {
-        amount: 0.5, // 0.5 SOL flash loan
-        token: 'SOL',
-        provider: 'SOLEND',
-        collateralAmount: 0.1, // Only 0.1 SOL as collateral
-        maxSlippage: 0.01
-      };
-
-      const result = await LiveTradingEngine.executeFlashLoanTrade(flashLoanParams);
-      
-      if (result.status === 'closed' && result.realizedPnL > 0) {
-        setFlashLoanResult(`Flash loan successful! Profit: $${result.realizedPnL.toFixed(4)}`);
-        // Refresh wallet balance after successful trade
-        await checkWalletConnection();
-      } else {
-        setFlashLoanResult(`Flash loan failed: ${result.realizedPnL < 0 ? 'No arbitrage found' : 'Execution error'}`);
-      }
-    } catch (error) {
-      setFlashLoanResult(`Flash loan error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsFlashLoanExecuting(false);
+  const executeOpportunity = async (opportunity: any) => {
+    const result = await engine.executeOpportunity(opportunity);
+    if (!result.success) {
+      console.error('Execution failed:', result.error);
     }
   };
+
+  const executeBundledTrades = async (opportunities: any[]) => {
+    console.log('Executing bundled trades:', opportunities.length);
+    for (const opp of opportunities.slice(0, 3)) {
+      await executeOpportunity(opp);
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  };
+
+  // Calculate capital efficiency and daily ROI
+  const capitalUsed = Math.max(walletBalance.totalUSD, 1);
+  const capitalEfficiency = (stats.totalProfit / capitalUsed) * 100;
+  const dailyROI = (stats.profitToday / capitalUsed) * 100;
+
+  if (!isWalletConnected) {
+    return (
+      <div className="container mx-auto p-6 max-w-4xl">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-6 h-6" />
+              Ultra-Low Capital MEV Bot
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center py-8">
+            <Alert className="mb-6 text-left">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Demo Mode:</strong> Connect your Phantom wallet to access live trading with real opportunities and execute actual transactions.
+              </AlertDescription>
+            </Alert>
+            
+            <Zap className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-semibold mb-2">Connect Your Phantom Wallet</h3>
+            <p className="text-muted-foreground mb-6">
+              Access ultra-low capital MEV opportunities starting from just $10. Execute flash loans with minimal collateral requirements.
+            </p>
+            <Button 
+              onClick={handleConnectWallet} 
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Connect Phantom Wallet
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -141,49 +136,25 @@ const UltraLowCapitalDashboard = () => {
                 Engine Active
               </Badge>
             )}
-            {!isWalletConnected && (
-              <Badge variant="outline" className="border-yellow-500 text-yellow-600">
-                Demo Mode
-              </Badge>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!isWalletConnected && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="text-sm text-yellow-700">
-                <strong>Demo Mode:</strong> Connect Phantom wallet to access live trading features. 
-                Opportunities shown below are for demonstration purposes.
-              </div>
-            </div>
-          )}
-          
           <div className="flex items-center gap-4">
             <Button
-              onClick={handleToggleActive}
-              variant={isActive ? "destructive" : "default"}
+              onClick={toggleScanning}
+              variant={isScanning ? "destructive" : "default"}
               className="flex items-center gap-2"
             >
-              {isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              {isActive ? 'Stop Scanning' : 'Start Scanning'}
+              {isScanning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {isScanning ? 'Stop Scanning' : 'Start Scanning'}
             </Button>
             
-            <Button
-              onClick={scanMicroOpportunities}
-              variant="outline"
-              disabled={isScanning}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${isScanning ? 'animate-spin' : ''}`} />
-              Scan Opportunities
-            </Button>
-
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Active Positions: {activePositions}</span>
+              <span>Active Positions: {activePositions.length}</span>
               <span>•</span>
               <span>Success Rate: {stats.successRate.toFixed(1)}%</span>
               <span>•</span>
-              <span>Mode: {isWalletConnected ? 'Live' : 'Demo'}</span>
+              <span>Live Trading</span>
             </div>
           </div>
         </CardContent>
@@ -198,10 +169,10 @@ const UltraLowCapitalDashboard = () => {
               <span className="text-sm font-medium">Current Capital</span>
             </div>
             <div className="text-2xl font-bold text-green-600">
-              ${currentCapital.toFixed(2)}
+              ${walletBalance.totalUSD.toFixed(2)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {isWalletConnected ? 'Live wallet balance' : 'Demo balance (connect wallet for real balance)'}
+              Live wallet balance
             </div>
           </CardContent>
         </Card>
@@ -212,8 +183,8 @@ const UltraLowCapitalDashboard = () => {
               <TrendingUp className="w-4 h-4 text-blue-500" />
               <span className="text-sm font-medium">Total Profit</span>
             </div>
-            <div className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${totalProfit.toFixed(2)}
+            <div className={`text-2xl font-bold ${stats.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${stats.totalProfit.toFixed(2)}
             </div>
             <div className="text-xs text-muted-foreground">
               Capital Efficiency: {capitalEfficiency.toFixed(1)}%
@@ -257,37 +228,39 @@ const UltraLowCapitalDashboard = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-blue-500" />
-            Micro-MEV Opportunities
-            <Badge variant="outline">{opportunities.length} Available</Badge>
+            Ultra-Low Capital Opportunities
+            <Badge variant="outline">{ultraLowOpportunities.length} Available</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {opportunities.length === 0 ? (
+          {ultraLowOpportunities.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Target className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <div>No micro-opportunities found</div>
-              <div className="text-sm">Scanning for $0.10+ profit opportunities...</div>
+              <div>No ultra-low capital opportunities found</div>
+              <div className="text-sm">Start scanning to find opportunities under $100...</div>
             </div>
           ) : (
             <div className="space-y-3">
               {/* Bundle Execution */}
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div>
-                  <div className="font-semibold">Bundle Execution Available</div>
-                  <div className="text-sm text-muted-foreground">
-                    Execute {Math.min(3, opportunities.length)} trades simultaneously
+              {ultraLowOpportunities.length >= 2 && (
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div>
+                    <div className="font-semibold">Bundle Execution Available</div>
+                    <div className="text-sm text-muted-foreground">
+                      Execute {Math.min(3, ultraLowOpportunities.length)} trades simultaneously
+                    </div>
                   </div>
+                  <Button
+                    onClick={() => executeBundledTrades(ultraLowOpportunities)}
+                    size="sm"
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    Execute Bundle
+                  </Button>
                 </div>
-                <Button
-                  onClick={() => executeBundledTrades(opportunities.slice(0, 3))}
-                  size="sm"
-                  className="bg-blue-500 hover:bg-blue-600"
-                >
-                  Execute Bundle
-                </Button>
-              </div>
+              )}
 
-              {opportunities.slice(0, 10).map((opportunity) => (
+              {ultraLowOpportunities.slice(0, 10).map((opportunity) => (
                 <div key={opportunity.id} className="border rounded-lg p-3 bg-gradient-to-r from-white to-green-50">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
@@ -306,12 +279,12 @@ const UltraLowCapitalDashboard = () => {
                   <div className="grid grid-cols-3 gap-4 text-sm mb-3">
                     <div>
                       <span className="text-muted-foreground">Capital: </span>
-                      <span className="font-semibold">${opportunity.requiredCapital}</span>
+                      <span className="font-semibold">${opportunity.requiredCapital.toFixed(2)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Profit %: </span>
                       <span className="font-semibold text-green-600">
-                        {opportunity.profitPercentage.toFixed(3)}%
+                        {((opportunity.estimatedProfit / opportunity.requiredCapital) * 100).toFixed(3)}%
                       </span>
                     </div>
                     <div>
@@ -331,12 +304,12 @@ const UltraLowCapitalDashboard = () => {
                       />
                     </div>
                     <Button
-                      onClick={() => executeMicroTrade(opportunity)}
+                      onClick={() => executeOpportunity(opportunity)}
                       size="sm"
                       className="bg-green-500 hover:bg-green-600"
-                      disabled={!isActive || emergencyMode || !isWalletConnected}
+                      disabled={!isEngineActive || emergencyMode}
                     >
-                      {isWalletConnected ? 'Execute Trade' : 'Connect Wallet'}
+                      Execute Trade
                     </Button>
                   </div>
                 </div>
@@ -353,64 +326,29 @@ const UltraLowCapitalDashboard = () => {
             <Bolt className="w-5 h-5 text-yellow-500" />
             Ultra-Low Capital Flash Loans
             <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-              0.1 SOL Required
+              Starting $10
             </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!isWalletConnected && (
-            <Alert className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Phantom wallet not connected. Flash loans require wallet connection and sufficient balance.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {isWalletConnected && !isEngineActive && (
-            <Alert className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Trading engine failed to initialize. Please check your wallet balance and connection.
-              </AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-4">
             <div className="p-4 bg-yellow-50 rounded-lg">
               <div className="text-sm font-medium mb-2">Flash Loan Strategy</div>
               <div className="text-xs text-muted-foreground space-y-1">
-                <div>• Borrow 0.5 SOL with only 0.1 SOL collateral</div>
-                <div>• Execute cross-DEX arbitrage (Orca ↔ Raydium)</div>
-                <div>• Repay loan + fee instantly</div>
-                <div>• Keep profit with minimal capital exposure</div>
+                <div>• Unified engine automatically selects best flash loan provider</div>
+                <div>• Dynamic RPC selection for fastest execution</div>
+                <div>• Integrated with Jito bundles for MEV protection</div>
+                <div>• Real-time opportunity scanning across all DEXs</div>
               </div>
             </div>
 
-            {flashLoanResult && (
-              <div className={`p-3 rounded-lg ${flashLoanResult.includes('successful') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                {flashLoanResult}
-              </div>
-            )}
-
-            <Button
-              onClick={executeFlashLoanArbitrage}
-              disabled={isFlashLoanExecuting || !isWalletConnected || !isEngineActive}
-              className="w-full bg-yellow-600 hover:bg-yellow-700"
-              size="lg"
-            >
-              {isFlashLoanExecuting ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Executing Flash Loan...
-                </div>
-              ) : (
-                <>
-                  <Bolt className="w-4 h-4 mr-2" />
-                  Execute Flash Loan Arbitrage
-                </>
-              )}
-            </Button>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                The unified trading engine now handles all flash loan execution automatically. 
+                Simply start scanning and the engine will find and execute the best opportunities.
+              </AlertDescription>
+            </Alert>
           </div>
         </CardContent>
       </Card>
@@ -430,14 +368,14 @@ const UltraLowCapitalDashboard = () => {
               {tradeHistory.slice(-10).reverse().map((trade, index) => (
                 <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <div className="flex items-center gap-3">
-                    <Badge variant={trade.success ? "default" : "destructive"}>
-                      {trade.success ? "SUCCESS" : "FAILED"}
+                    <Badge variant={trade.status === 'closed' ? "default" : "destructive"}>
+                      {trade.status.toUpperCase()}
                     </Badge>
                     <span className="text-sm">{trade.type}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${trade.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${trade.profit.toFixed(4)}
+                    <span className={`font-semibold ${trade.realizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      ${trade.realizedPnL.toFixed(4)}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {new Date(trade.timestamp).toLocaleTimeString()}
