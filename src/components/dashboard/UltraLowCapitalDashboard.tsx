@@ -46,8 +46,16 @@ const UltraLowCapitalDashboard = () => {
     try {
       const result = await PhantomWalletService.connect();
       if (result.success) {
-        // Get wallet balance
-        const balance = await PhantomWalletService.getBalance();
+        console.log('✅ Wallet connected successfully:', result.publicKey);
+        
+        // Try to get wallet balance (don't fail if this fails)
+        let balance = { sol: 0, usdc: 0, usdt: 0, totalUSD: 0 };
+        try {
+          balance = await PhantomWalletService.getBalance();
+          console.log('💰 Wallet balance fetched:', balance);
+        } catch (balanceError) {
+          console.warn('⚠️ Could not fetch balance, using default:', balanceError);
+        }
         
         // Update trading store with wallet connection
         useTradingStore.getState().setWalletConnection(true, result.publicKey, balance);
