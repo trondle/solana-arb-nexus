@@ -10,11 +10,11 @@ export interface RpcEndpoint {
 
 export class RpcLatencyManager {
   private endpoints: RpcEndpoint[] = [
-    { url: 'https://api.mainnet-beta.solana.com', name: 'Solana Official', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://solana-api.projectserum.com', name: 'Project Serum', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://rpc.ankr.com/solana', name: 'Ankr', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
+    { url: 'https://api.devnet.solana.com', name: 'Solana Devnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
     { url: 'https://solana.publicnode.com', name: 'PublicNode', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://mainnet.helius-rpc.com/?api-key=public', name: 'Helius Public', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 }
+    { url: 'https://rpc.solana.com', name: 'Solana Labs RPC', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
+    { url: 'https://api.mainnet-beta.solana.com', name: 'Solana Official', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
+    { url: 'https://solana-mainnet.rpc.extrnode.com', name: 'Extrnode', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 }
   ];
   
   private monitoringInterval?: NodeJS.Timeout;
