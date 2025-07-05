@@ -46,10 +46,22 @@ const UltraLowCapitalDashboard = () => {
     try {
       const result = await PhantomWalletService.connect();
       if (result.success) {
+        // Get wallet balance
+        const balance = await PhantomWalletService.getBalance();
+        
+        // Update trading store with wallet connection
+        useTradingStore.getState().setWalletConnection(true, result.publicKey, balance);
+        
+        // Initialize engine
         await engine.initialize();
+        console.log('✅ Wallet connected and engine initialized');
+      } else {
+        console.error('❌ Wallet connection failed:', result.error);
+        alert(`Wallet connection failed: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Wallet connection failed:', error);
+      console.error('❌ Wallet connection failed:', error);
+      alert(`Wallet connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
