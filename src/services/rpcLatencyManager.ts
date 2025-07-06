@@ -12,9 +12,9 @@ export class RpcLatencyManager {
   private endpoints: RpcEndpoint[] = [
     { url: 'https://api.devnet.solana.com', name: 'Solana Devnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
     { url: 'https://solana.publicnode.com', name: 'PublicNode', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://rpc.solana.com', name: 'Solana Labs RPC', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://api.mainnet-beta.solana.com', name: 'Solana Official', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://solana-mainnet.rpc.extrnode.com', name: 'Extrnode', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 }
+    { url: 'https://solana-rpc.publicnode.com', name: 'PublicNode Alt', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
+    { url: 'https://rpc.ironforge.network/mainnet?apiKey=01234567-89ab-cdef-0123-456789abcdef', name: 'Ironforge', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
+    { url: 'https://try-rpc.mainnet.solana.blockdaemon.tech', name: 'Blockdaemon', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 }
   ];
   
   private monitoringInterval?: NodeJS.Timeout;
