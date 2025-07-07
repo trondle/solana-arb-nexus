@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useMicroMevBot } from '../../hooks/useMicroMevBot';
 import { PhantomWalletService } from '../../services/phantomWalletService';
 import { LiveTradingEngine } from '../../services/liveTradingEngine';
+import { useTradingStore } from '../../store/tradingStore';
 import { 
   Zap, 
   Target, 
@@ -25,9 +26,9 @@ import {
 
 const MicroMevDashboard = () => {
   const [isActive, setIsActive] = useState(false);
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  
+  const { isWalletConnected, walletBalance, setWalletConnection } = useTradingStore();
   
   const {
     opportunities,
@@ -46,17 +47,15 @@ const MicroMevDashboard = () => {
     checkWalletConnection();
   }, []);
 
-  useEffect(() => {
-    if (isWalletConnected) {
-      updateWalletBalance();
-    }
-  }, [isWalletConnected]);
-
   const checkWalletConnection = async () => {
     try {
       await PhantomWalletService.initialize();
       const connected = PhantomWalletService.isWalletConnected();
-      setIsWalletConnected(connected);
+      if (connected) {
+        const balance = await PhantomWalletService.getBalance();
+        const address = PhantomWalletService.getPublicKey() || '';
+        setWalletConnection(connected, address, balance);
+      }
     } catch (error) {
       console.error('Wallet check failed:', error);
       setError(error instanceof Error ? error.message : 'Wallet check failed');
@@ -66,7 +65,8 @@ const MicroMevDashboard = () => {
   const updateWalletBalance = async () => {
     try {
       const balance = await PhantomWalletService.getBalance();
-      setWalletBalance(balance.totalUSD);
+      const address = PhantomWalletService.getPublicKey() || '';
+      setWalletConnection(true, address, balance);
     } catch (error) {
       console.error('Balance update failed:', error);
     }
@@ -78,7 +78,7 @@ const MicroMevDashboard = () => {
       return;
     }
 
-    if (walletBalance < 10) {
+    if (walletBalance.totalUSD < 10) {
       setError('Minimum balance of $10 required for micro-MEV trading');
       return;
     }
@@ -105,8 +105,8 @@ const MicroMevDashboard = () => {
       setError(null);
       await updateWalletBalance(); // Refresh balance before execution
       
-      if (walletBalance < opportunity.requiredCapital) {
-        setError(`Insufficient balance. Required: $${opportunity.requiredCapital.toFixed(2)}, Available: $${walletBalance.toFixed(2)}`);
+      if (walletBalance.totalUSD < opportunity.requiredCapital) {
+        setError(`Insufficient balance. Required: $${opportunity.requiredCapital.toFixed(2)}, Available: $${walletBalance.totalUSD.toFixed(2)}`);
         return;
       }
 
@@ -127,8 +127,8 @@ const MicroMevDashboard = () => {
         .slice(0, 3)
         .reduce((sum, opp) => sum + opp.requiredCapital, 0);
 
-      if (walletBalance < totalRequired) {
-        setError(`Insufficient balance for batch execution. Required: $${totalRequired.toFixed(2)}, Available: $${walletBalance.toFixed(2)}`);
+      if (walletBalance.totalUSD < totalRequired) {
+        setError(`Insufficient balance for batch execution. Required: $${totalRequired.toFixed(2)}, Available: $${walletBalance.totalUSD.toFixed(2)}`);
         return;
       }
 
@@ -206,13 +206,13 @@ const MicroMevDashboard = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium">Wallet Balance: ${walletBalance.toFixed(2)}</div>
+                <div className="text-sm font-medium">Wallet Balance: ${walletBalance.totalUSD.toFixed(2)}</div>
                 <div className="text-xs text-muted-foreground">
-                  {walletBalance < 10 ? 'Minimum $10 required' : 'Ready for trading'}
+                  {walletBalance.totalUSD < 10 ? 'Minimum $10 required' : 'Ready for trading'}
                 </div>
               </div>
-              <Badge variant={walletBalance >= 10 ? "default" : "destructive"}>
-                {walletBalance >= 10 ? 'Sufficient' : 'Insufficient'}
+              <Badge variant={walletBalance.totalUSD >= 10 ? "default" : "destructive"}>
+                {walletBalance.totalUSD >= 10 ? 'Sufficient' : 'Insufficient'}
               </Badge>
             </div>
             
@@ -221,7 +221,7 @@ const MicroMevDashboard = () => {
                 onClick={handleToggleActive}
                 variant={isActive ? "destructive" : "default"}
                 className="flex items-center gap-2"
-                disabled={walletBalance < 10}
+                disabled={walletBalance.totalUSD < 10}
               >
                 {isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 {isActive ? 'Stop Detection' : 'Start Live Trading'}
@@ -394,17 +394,17 @@ const MicroMevDashboard = () => {
                         value={opportunity.confidence} 
                         className="w-20 h-2"
                       />
-                      {walletBalance < opportunity.requiredCapital && (
-                        <Badge variant="destructive" className="text-xs">
-                          Insufficient Balance
-                        </Badge>
-                      )}
+                       {walletBalance.totalUSD < opportunity.requiredCapital && (
+                         <Badge variant="destructive" className="text-xs">
+                           Insufficient Balance
+                         </Badge>
+                       )}
                     </div>
                     <Button
                       onClick={() => handleExecuteOpportunity(opportunity)}
                       size="sm"
                       className="bg-blue-500 hover:bg-blue-600"
-                      disabled={!isActive || walletBalance < opportunity.requiredCapital}
+                      disabled={!isActive || walletBalance.totalUSD < opportunity.requiredCapital}
                     >
                       <Zap className="w-3 h-3 mr-1" />
                       Execute Live
