@@ -145,8 +145,19 @@ export class PhantomWalletService {
       const usdc = 0; // TODO: Implement SPL token balance fetching
       const usdt = 0; // TODO: Implement SPL token balance fetching
 
-      // Calculate total USD value (SOL price ~$100)
-      const totalUSD = sol * 100 + usdc + usdt;
+      // Calculate total USD value using real SOL price
+      let solPrice = 100; // Default fallback
+      try {
+        const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+        const priceData = await priceResponse.json();
+        if (priceData.solana?.usd) {
+          solPrice = priceData.solana.usd;
+        }
+      } catch (priceError) {
+        console.warn('⚠️ Could not fetch SOL price, using fallback $100');
+      }
+      
+      const totalUSD = sol * solPrice + usdc + usdt;
 
       return { sol, usdc, usdt, totalUSD };
     } catch (error) {
