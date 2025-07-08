@@ -11,10 +11,9 @@ export interface RpcEndpoint {
 export class RpcLatencyManager {
   private endpoints: RpcEndpoint[] = [
     { url: 'https://api.devnet.solana.com', name: 'Solana Devnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://rpc.ankr.com/solana_devnet', name: 'Ankr Devnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
     { url: 'https://api.testnet.solana.com', name: 'Solana Testnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://solana-devnet.g.alchemy.com/v2/demo', name: 'Alchemy Devnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
-    { url: 'https://rpc.ankr.com/solana_devnet_free', name: 'Ankr Free', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 }
+    { url: 'https://devnet.helius-rpc.com/?api-key=demo', name: 'Helius Devnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 },
+    { url: 'https://rpc-devnet.helius.xyz/?api-key=demo', name: 'Helius RPC Devnet', latency: 0, isHealthy: true, lastChecked: 0, successRate: 100 }
   ];
   
   private monitoringInterval?: NodeJS.Timeout;
